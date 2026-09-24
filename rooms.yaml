@@ -2,6 +2,7 @@ rooms:
   - id: "auditorio-principal"
     name: "Auditorio Principal - Cloud Native & DevOps"
     kind: "file"
+    backend: "local"
     source_uri: "samples/speech_sample.wav"
     source_lang: "es-419"
     target_langs:
@@ -21,6 +22,7 @@ rooms:
   - id: "sala-workshops"
     name: "Sala de Workshops - Inteligencia Artificial"
     kind: "file"
+    backend: "local"
     source_uri: "samples/speech_sample.wav"
     source_lang: "es-419"
     target_langs:

@@ -20,10 +20,16 @@ class SourceKind(str, Enum):
     STREAM = "stream"
 
 
+class ASRBackendKind(str, Enum):
+    LOCAL = "local"
+    CLOUD = "cloud"
+
+
 class RoomConfig(BaseModel):
     id: str = Field(..., description="Identificador único de la sala (ej. auditorio-principal)")
     name: str = Field(..., description="Nombre descriptivo de la sala (ej. Auditorio Principal)")
     kind: SourceKind = Field(SourceKind.FILE, description="Tipo de fuente: 'file', 'mic' o 'stream'")
+    backend: ASRBackendKind = Field(ASRBackendKind.LOCAL, description="Backend ASR: 'local' (GPU RTX / Whisper / Gemma) o 'cloud' (Gemini Live)")
     source_uri: str = Field(..., description="Ruta al archivo, URI RTMP/HLS, o nombre del dispositivo de audio")
     source_lang: str = Field("es-419", description="Idioma de origen (ej. 'es-419', 'en', o vacía para auto)")
     target_langs: List[str] = Field(default_factory=lambda: ["es", "en"], description="Idiomas de subtitulado disponibles")
@@ -34,6 +40,7 @@ class RoomConfig(BaseModel):
 
 class RoomPatch(BaseModel):
     name: Optional[str] = None
+    backend: Optional[ASRBackendKind] = None
     target_langs: Optional[List[str]] = None
     custom_vocabulary: Optional[List[str]] = None
 

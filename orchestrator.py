@@ -7,11 +7,13 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel
 
 from audio.source import AudioSource
+from asr.base import ASRBackend
+from asr.local import LocalASR
 from asr.rotation import SeamlessRotationASR
 from translate.gemini_text import GeminiTranslator
 from bus import event_bus, SubtitleEvent
 from store import subtitle_store
-from config import RoomConfig, RoomPatch, RoomState, SourceKind
+from config import ASRBackendKind, RoomConfig, RoomPatch, RoomState, SourceKind
 
 logger = logging.getLogger("nerdearla.orchestrator")
 
@@ -20,6 +22,7 @@ class RoomStatus(BaseModel):
     id: str
     name: str
     kind: SourceKind
+    backend: ASRBackendKind
     source_uri: str
     source_lang: str
     target_langs: List[str]
@@ -36,7 +39,7 @@ class RoomStatus(BaseModel):
 class SessionWorker:
     """
     Trabajador asíncrono que encapsula el ciclo de vida y el pipeline de una sala:
-    AudioSource (FFmpeg) -> SeamlessRotationASR -> GeminiTranslator -> EventBus + SubtitleStore
+    AudioSource (FFmpeg) -> ASRBackend (Local GPU o Gemini Cloud) -> Traductor -> EventBus + SubtitleStore
     """
 
     def __init__(self, room: RoomConfig):
@@ -49,7 +52,7 @@ class SessionWorker:
         self._stop_event = asyncio.Event()
 
         self.audio_source: Optional[AudioSource] = None
-        self.asr: Optional[SeamlessRotationASR] = None
+        self.asr: Optional[ASRBackend] = None
         self.translator = GeminiTranslator(
             custom_glossary=room.custom_vocabulary
         )
@@ -88,7 +91,7 @@ class SessionWorker:
         self.is_running = True
         self._stop_event.clear()
         self.started_at = time.time()
-        self._set_state(RoomState.STARTING, "Inicializando conexiones y ASR")
+        self._set_state(RoomState.STARTING, f"Inicializando conexiones y ASR ({self.room.backend.value})")
         subtitle_store.start_room_clock(self.room.id)
 
         try:
@@ -100,10 +103,20 @@ class SessionWorker:
                 on_recovered=self._on_source_recovered
             )
 
-            self.asr = SeamlessRotationASR(
-                language=self.room.source_lang,
-                custom_vocabulary=self.room.custom_vocabulary
-            )
+            if self.room.backend == ASRBackendKind.LOCAL:
+                logger.info("[%s] Usando backend Local ASR en GPU...", self.room.id)
+                self.asr = LocalASR(
+                    model_size="base",
+                    device="cuda",
+                    language=self.room.source_lang,
+                    custom_vocabulary=self.room.custom_vocabulary
+                )
+            else:
+                logger.info("[%s] Usando backend Cloud Gemini Live ASR con rotación...", self.room.id)
+                self.asr = SeamlessRotationASR(
+                    language=self.room.source_lang,
+                    custom_vocabulary=self.room.custom_vocabulary
+                )
 
             await self.asr.start()
 
@@ -116,7 +129,7 @@ class SessionWorker:
                 name=f"worker-processor-{self.room.id}"
             )
             self._tasks = [feeder_task, processor_task]
-            self._set_state(RoomState.ACTIVE, "Transmisión y ASR en vivo")
+            self._set_state(RoomState.ACTIVE, f"Transmisión y ASR activo ({self.room.backend.value})")
 
         except Exception as e:
             self.errors_count += 1
@@ -125,7 +138,7 @@ class SessionWorker:
             await self.stop()
 
     async def _audio_feeder(self) -> None:
-        """Lee el audio de FFmpeg y lo envía continuamente a SeamlessRotationASR."""
+        """Lee el audio de FFmpeg y lo envía continuamente al ASR."""
         try:
             assert self.audio_source is not None
             assert self.asr is not None
@@ -241,6 +254,8 @@ class SessionWorker:
         """Aplica modificaciones en caliente a la sala."""
         if patch.name is not None:
             self.room.name = patch.name
+        if patch.backend is not None:
+            self.room.backend = patch.backend
         if patch.target_langs is not None:
             self.room.target_langs = patch.target_langs
         if patch.custom_vocabulary is not None:
@@ -257,6 +272,7 @@ class SessionWorker:
             id=self.room.id,
             name=self.room.name,
             kind=self.room.kind,
+            backend=self.room.backend,
             source_uri=self.room.source_uri,
             source_lang=self.room.source_lang,
             target_langs=self.room.target_langs,
@@ -294,7 +310,7 @@ class Orchestrator:
             room = RoomConfig(**r_dict)
             if room.id not in self._workers:
                 self._workers[room.id] = SessionWorker(room)
-                logger.info("Sala registrada en orquestador: %s ('%s', auto_start=%s)", room.id, room.name, room.auto_start)
+                logger.info("Sala registrada: %s ('%s', backend=%s, auto_start=%s)", room.id, room.name, room.backend.value, room.auto_start)
 
     async def start_all(self) -> None:
         """Inicia únicamente las salas que tienen auto_start=True."""
@@ -334,7 +350,7 @@ class Orchestrator:
 
         worker = SessionWorker(room_config)
         self._workers[room_config.id] = worker
-        logger.info("Nueva sala creada en caliente: %s ('%s')", room_config.id, room_config.name)
+        logger.info("Nueva sala creada en caliente: %s ('%s', backend=%s)", room_config.id, room_config.name, room_config.backend.value)
 
         if start or room_config.auto_start:
             await worker.start()

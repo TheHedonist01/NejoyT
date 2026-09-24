@@ -581,14 +581,14 @@
         <span class="stat-sub" id="statUptime">Orquestador en línea</span>
       </div>
       <div class="stat-card">
-        <span class="stat-title">Modelo Streaming ASR</span>
-        <div class="stat-value" style="font-size: 1.15rem; color: var(--primary);">gemini-3.5-transcribe-live</div>
-        <span class="stat-sub">WebSocket bidireccional</span>
+        <span class="stat-title">Motor ASR Local (GPU)</span>
+        <div class="stat-value" style="font-size: 1.15rem; color: var(--primary);">NVIDIA CUDA (RTX 3070)</div>
+        <span class="stat-sub">faster-whisper · float16 · Sin límites de cuota</span>
       </div>
       <div class="stat-card">
-        <span class="stat-title">Modelo Traducción</span>
-        <div class="stat-value" style="font-size: 1.15rem; color: #a370f7;">gemini-3.6-flash</div>
-        <span class="stat-sub">Traducción con glosario técnico</span>
+        <span class="stat-title">Motor ASR Cloud</span>
+        <div class="stat-value" style="font-size: 1.15rem; color: #a370f7;">gemini-3.5-transcribe-live</div>
+        <span class="stat-sub">Streaming WebSocket con rotación continua</span>
       </div>
       <div class="stat-card">
         <span class="stat-title">Audiencia Conectada</span>
@@ -638,6 +638,14 @@
         </div>
 
         <div class="form-group">
+          <label>Motor de ASR / Inferencia</label>
+          <div class="source-options" style="grid-template-columns: 1fr 1fr;">
+            <div class="source-option selected" id="backendOptLocal" onclick="selectBackend('local')">⚡ GPU Local (RTX 3070 · Ilimitado)</div>
+            <div class="source-option" id="backendOptCloud" onclick="selectBackend('cloud')">☁ Google Cloud (Gemini 3.5 Live)</div>
+          </div>
+        </div>
+
+        <div class="form-group">
           <label>Tipo de Fuente de Audio</label>
           <div class="source-options">
             <div class="source-option selected" data-kind="file" onclick="selectSourceKind('file')">📁 Archivo Demo</div>
@@ -645,6 +653,7 @@
             <div class="source-option" data-kind="stream" onclick="selectSourceKind('stream')">📡 Stream RTMP/HLS</div>
           </div>
         </div>
+
 
         <div class="form-group">
           <label id="sourceUriLabel">Ruta al archivo de audio</label>
@@ -739,8 +748,15 @@
 
   <script>
     let selectedKind = 'file';
+    let selectedBackend = 'local';
     let activeEditingRoomId = null;
     let availableDevices = [];
+
+    function selectBackend(backend) {
+      selectedBackend = backend;
+      document.getElementById('backendOptLocal').classList.toggle('selected', backend === 'local');
+      document.getElementById('backendOptCloud').classList.toggle('selected', backend === 'cloud');
+    }
 
     function getAdminToken() {
       const input = document.getElementById('adminToken');
@@ -846,12 +862,16 @@
         }
 
         const sourceIcon = room.kind === 'mic' ? '🎙' : (room.kind === 'stream' ? '📡' : '📁');
+        const backendBadge = (room.backend === 'local') 
+          ? `<span class="badge" style="background: rgba(0, 210, 255, 0.15); color: #00d2ff; border: 1px solid rgba(0, 210, 255, 0.3);">⚡ GPU LOCAL</span>`
+          : `<span class="badge" style="background: rgba(163, 112, 247, 0.15); color: #a370f7; border: 1px solid rgba(163, 112, 247, 0.3);">☁ CLOUD GEMINI</span>`;
 
         return `
           <div class="room-card">
             <div class="room-info">
-              <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem;">
+              <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
                 <h3>${room.name}</h3>
+                ${backendBadge}
                 <span class="badge ${badgeClass}">${badgeLabel}</span>
               </div>
               <div class="room-meta">
@@ -980,6 +1000,7 @@
         id: document.getElementById('newRoomId').value.trim(),
         name: document.getElementById('newRoomName').value.trim(),
         kind: selectedKind,
+        backend: selectedBackend,
         source_uri: document.getElementById('newRoomUri').value.trim(),
         source_lang: document.getElementById('newRoomSourceLang').value,
         target_langs: targets,
