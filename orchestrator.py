@@ -408,9 +408,15 @@ class Orchestrator:
         logger.info("Nueva sala creada: %s ('%s', backend=%s)", room_config.id, room_config.name, room_config.backend.value)
 
         if start or room_config.auto_start:
-            await worker.start()
+            asyncio.create_task(self._safe_start_worker(worker))
 
         return worker
+
+    async def _safe_start_worker(self, worker: SessionWorker) -> None:
+        try:
+            await worker.start()
+        except Exception as e:
+            logger.error("[%s] Error iniciando worker en segundo plano: %s", worker.room.id, e)
 
     async def delete_room(self, room_id: str) -> bool:
         worker = self.get_worker(room_id)
