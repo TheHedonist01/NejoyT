@@ -138,27 +138,49 @@ class LocalASR(ASRBackend):
 
                     def _run_transcribe():
                         audio_np = np.frombuffer(window_data, dtype=np.int16).astype(np.float32) / 32768.0
-                        # Transcripción original en el idioma de la sala
+                        lang = None if (not self.language or self.language in ("auto", "auto-detect", "multilingual")) else self.language[:2]
+
+                        # 1. Transcripción original (auto-detecta si es auto o None)
                         segments, info = self._model.transcribe(
                             audio_np,
-                            language=self.language[:2] if self.language else None,
+                            language=lang,
                             initial_prompt=initial_prompt,
                             beam_size=1,  # Greedy search para máxima velocidad en vivo
                             temperature=0.0
                         )
                         text = " ".join(s.text.strip() for s in segments if s.text.strip())
-                        return text
+                        detected_lang = info.language or (lang or "es")
 
-                    text = await loop.run_in_executor(None, _run_transcribe)
+                        # 2. Si el idioma no es inglés, generar traducción al inglés directa en GPU (0.3s)
+                        en_translation = None
+                        if text and detected_lang != "en":
+                            try:
+                                trans_segments, _ = self._model.transcribe(
+                                    audio_np,
+                                    task="translate",
+                                    beam_size=1,
+                                    temperature=0.0
+                                )
+                                en_translation = " ".join(s.text.strip() for s in trans_segments if s.text.strip())
+                            except Exception:
+                                en_translation = None
+                        elif text and detected_lang == "en":
+                            en_translation = text
+
+                        return text, detected_lang, en_translation
+
+                    text, detected_lang, en_translation = await loop.run_in_executor(None, _run_transcribe)
 
                     if text:
-                        # Emite evento final de frase reconocida
+                        # Emite evento final de frase reconocida con idioma real y traducción GPU
                         await self._queue.put(
                             ASRTranscriptionEvent(
                                 event_type="final",
                                 text=text,
                                 is_final=True,
-                                language=self.language
+                                language=detected_lang,
+                                translation=en_translation,
+                                translation_lang="en"
                             )
                         )
 

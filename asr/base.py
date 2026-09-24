@@ -10,6 +10,8 @@ class ASRTranscriptionEvent(BaseModel):
     text: str = Field(..., description="Texto reconocido")
     is_final: bool = Field(False, description="True si es una transcripción cerrada")
     language: Optional[str] = Field(None, description="Código de idioma detectado o configurado")
+    translation: Optional[str] = Field(None, description="Traducción directa local si está disponible")
+    translation_lang: Optional[str] = Field(None, description="Código de idioma de la traducción directa")
     timestamp: float = Field(default_factory=time.time, description="Marca de tiempo en segundos")
 
 

@@ -1,10 +1,10 @@
 rooms:
-- id: sala a
-  name: Lego
+- id: asd
+  name: asd
   kind: mic
   backend: local
-  source_uri: 'Micrófono (Realtek(R) Audio)'
-  source_lang: es-419
+  source_uri: Micrófono (Realtek(R) Audio)
+  source_lang: auto
   target_langs:
   - es
   - en

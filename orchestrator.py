@@ -165,54 +165,70 @@ class SessionWorker:
                 if self._stop_event.is_set():
                     break
 
+                speaker_lang = (asr_event.language or self.room.source_lang or "es").strip().lower()[:2]
+
                 # 1. Evento interim (hipótesis parcial en idioma original al instante)
                 if not asr_event.is_final:
                     event = SubtitleEvent(
                         room_id=self.room.id,
                         event_type="interim",
                         text=asr_event.text,
-                        language=self.room.source_lang,
+                        language=speaker_lang,
                         is_final=False
                     )
                     event_bus.publish(self.room.id, event)
                     continue
 
-                # 2. Evento final (frase cerrada)
+                # 2. Evento final (frase cerrada en idioma original hablado)
                 final_event = SubtitleEvent(
                     room_id=self.room.id,
                     event_type="final",
                     text=asr_event.text,
-                    language=self.room.source_lang,
+                    language=speaker_lang,
                     is_final=True
                 )
                 event_bus.publish(self.room.id, final_event)
 
-                # 3. Traducciones a idiomas objetivo (solo para frases finales)
-                translations: Dict[str, str] = {}
-                for target_lang in self.room.target_langs:
-                    if target_lang != self.room.source_lang:
+                # 3. Traducciones a idiomas objetivo
+                translations: Dict[str, str] = {speaker_lang: asr_event.text}
+                active_langs = event_bus.active_languages(self.room.id)
+
+                for raw_target in self.room.target_langs:
+                    tgt = raw_target.strip().lower()[:2]
+                    if tgt == speaker_lang:
+                        continue
+
+                    # A. Si el objetivo es inglés y tenemos traducción directa en GPU (0.3s), usarla sin gastar cuota
+                    if tgt == "en" and getattr(asr_event, "translation", None) and asr_event.translation_lang == "en":
+                        translated_text = asr_event.translation
+                    else:
+                        # B. Si ningún cliente conectado está escuchando este idioma, omitir llamada remota
+                        if active_langs and tgt not in active_langs:
+                            continue
+
                         translated_text = await self.translator.translate(
                             text=asr_event.text,
-                            target_lang=target_lang,
-                            source_lang=self.room.source_lang
+                            target_lang=tgt,
+                            source_lang=speaker_lang
                         )
-                        translations[target_lang] = translated_text
 
-                        # Emitir evento de traducción para clientes que escuchan en este idioma
-                        trans_event = SubtitleEvent(
-                            room_id=self.room.id,
-                            event_type="translation",
-                            text=translated_text,
-                            language=target_lang,
-                            is_final=True
-                        )
-                        event_bus.publish(self.room.id, trans_event)
+                    translations[tgt] = translated_text
+
+                    # Emitir evento de traducción para clientes que escuchan en este idioma
+                    trans_event = SubtitleEvent(
+                        room_id=self.room.id,
+                        event_type="translation",
+                        text=translated_text,
+                        language=tgt,
+                        is_final=True
+                    )
+                    event_bus.publish(self.room.id, trans_event)
 
                 # 4. Guardar en el acumulador SRT/VTT
                 subtitle_store.add_subtitle(
                     room_id=self.room.id,
                     original_text=asr_event.text,
-                    original_lang=self.room.source_lang,
+                    original_lang=speaker_lang,
                     translations=translations
                 )
 

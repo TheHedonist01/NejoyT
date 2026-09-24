@@ -181,7 +181,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, lang: Optional[
     await websocket.accept()
     logger.info("Cliente WebSocket conectado a sala '%s' (idioma preferido: %s)", room_id, lang)
 
-    queue = await event_bus.subscribe(room_id)
+    queue = await event_bus.subscribe(room_id, lang=lang or "es")
 
     try:
         while True:

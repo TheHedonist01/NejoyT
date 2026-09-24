@@ -27,38 +27,56 @@ class EventBus:
 
     def __init__(self, max_queue_size: int = 100):
         self._max_queue_size = max_queue_size
-        self._subscribers: Dict[str, Set[asyncio.Queue[SubtitleEvent]]] = {}
+        self._subscribers: Dict[str, Set[tuple[asyncio.Queue[SubtitleEvent], str]]] = {}
         self._lock = asyncio.Lock()
 
-    async def subscribe(self, room_id: str) -> asyncio.Queue[SubtitleEvent]:
-        """Crea una cola de eventos para un nuevo suscriptor en una sala."""
+    async def subscribe(self, room_id: str, lang: str = "es") -> asyncio.Queue[SubtitleEvent]:
+        """Crea una cola de eventos para un nuevo suscriptor en una sala con idioma preferido."""
         queue: asyncio.Queue[SubtitleEvent] = asyncio.Queue(maxsize=self._max_queue_size)
+        clean_lang = (lang or "es").strip().lower()[:2]
         async with self._lock:
             if room_id not in self._subscribers:
                 self._subscribers[room_id] = set()
-            self._subscribers[room_id].add(queue)
-            logger.info("Nuevo suscriptor a sala '%s'. Total activos: %d", room_id, len(self._subscribers[room_id]))
+            self._subscribers[room_id].add((queue, clean_lang))
+            logger.info("Nuevo suscriptor a sala '%s' (idioma: %s). Total activos: %d", room_id, clean_lang, len(self._subscribers[room_id]))
         return queue
 
     async def unsubscribe(self, room_id: str, queue: asyncio.Queue[SubtitleEvent]) -> None:
         """Elimina la cola de un suscriptor desconectado."""
         async with self._lock:
             if room_id in self._subscribers:
-                self._subscribers[room_id].discard(queue)
+                self._subscribers[room_id] = {item for item in self._subscribers[room_id] if item[0] != queue}
                 logger.info("Suscriptor desconectado de sala '%s'. Restantes: %d", room_id, len(self._subscribers[room_id]))
                 if not self._subscribers[room_id]:
                     del self._subscribers[room_id]
 
+    def active_languages(self, room_id: str) -> Set[str]:
+        """Retorna el conjunto de idiomas (códigos 2 letras) que están escuchando los suscriptores conectados."""
+        subs = self._subscribers.get(room_id, set())
+        return {item[1] for item in subs}
+
     def publish(self, room_id: str, event: SubtitleEvent) -> None:
         """
-        Publica un evento a todos los suscriptores de la sala.
-        Si la cola de un suscriptor lento se llena, descarta el evento más viejo.
+        Publica un evento a los suscriptores correspondientes de la sala.
+        Filtra por idioma para que cada cliente reciba únicamente subtítulos en su idioma preferido,
+        salvo eventos de control (status) o hipótesis en vivo (interim).
         """
         subscribers = self._subscribers.get(room_id)
         if not subscribers:
             return
 
-        for queue in list(subscribers):
+        event_lang = (event.language or "es").strip().lower()[:2]
+
+        for queue, sub_lang in list(subscribers):
+            # Enviar si es control, interim, o si el idioma del evento coincide con el del cliente
+            should_send = (
+                event.event_type in ("status", "interim")
+                or event_lang == sub_lang
+                or sub_lang == "all"
+            )
+            if not should_send:
+                continue
+
             try:
                 queue.put_nowait(event)
             except asyncio.QueueFull:
