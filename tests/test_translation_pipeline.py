@@ -1,5 +1,10 @@
 import asyncio
 import logging
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from translate.gemini_text import GeminiTranslator
 from bus import event_bus, SubtitleEvent
 from store import subtitle_store

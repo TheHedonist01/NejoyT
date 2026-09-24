@@ -1,7 +1,11 @@
 import asyncio
 import logging
+import os
+import sys
 import time
 import numpy as np
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from asr.device import detect_compute_device
 from asr.local import LocalASR

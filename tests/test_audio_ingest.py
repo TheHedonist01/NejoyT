@@ -1,8 +1,12 @@
 import asyncio
 import logging
+import os
+import sys
 import time
-from audio.source import AudioSource
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from audio.source import AudioSource
 from config import SourceKind
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
