@@ -21,32 +21,58 @@ class AudioSource:
     CHUNK_DURATION_SEC = 0.1  # 100 ms
     CHUNK_SIZE_BYTES = int(SAMPLE_RATE * CHUNK_DURATION_SEC * BYTES_PER_SAMPLE)  # 3.200 B
 
-    def __init__(self, source_uri: str, is_live_stream: bool = False):
+    def __init__(self, source_uri: str, is_live_stream: bool = False, loop: bool = False):
         """
         :param source_uri: Archivo local o URL de streaming.
         :param is_live_stream: Si es True, no aplica pacing adaptativo (el stream ya viene a tiempo real).
-                               Si es False (ej. archivo de audio), regula el flujo a 32.000 B/s exactos.
+        :param loop: Si es True y es un archivo, reproduce en bucle continuo para demostraciones en vivo.
         """
         self.source_uri = source_uri
         self.is_live_stream = is_live_stream
+        self.loop = loop
         self._process: Optional[asyncio.subprocess.Process] = None
         self._stop_event = asyncio.Event()
 
+    def _resolve_ffmpeg_bin(self) -> str:
+        # 1. Chequear ruta directa del paquete completo instalado por WinGet
+        local_app_data = os.getenv("LOCALAPPDATA", "")
+        gyan_full = os.path.join(
+            local_app_data,
+            r"Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.2-full_build\bin\ffmpeg.exe"
+        )
+        if os.path.isfile(gyan_full):
+            return gyan_full
+
+        # 2. Buscar en WinGet/Packages genérico
+        packages_dir = os.path.join(local_app_data, r"Microsoft\WinGet\Packages")
+        if os.path.isdir(packages_dir):
+            for root, _, files in os.walk(packages_dir):
+                if "ffmpeg.exe" in files:
+                    return os.path.join(root, "ffmpeg.exe")
+
+        # 3. Buscar en PATH del sistema
+        return shutil.which("ffmpeg") or "ffmpeg"
+
     def _resolve_ffmpeg_cmd(self) -> list[str]:
-        # Buscar ejecutable de ffmpeg en PATH
-        ffmpeg_bin = shutil.which("ffmpeg") or "ffmpeg"
+        ffmpeg_bin = self._resolve_ffmpeg_bin()
 
         cmd = [
             ffmpeg_bin,
             "-hide_banner",
             "-loglevel", "error",
+        ]
+
+        if self.loop and not self.is_live_stream:
+            cmd.extend(["-stream_loop", "-1"])
+
+        cmd.extend([
             "-i", self.source_uri,
             "-f", "s16le",
             "-acodec", "pcm_s16le",
             "-ar", str(self.SAMPLE_RATE),
             "-ac", str(self.CHANNELS),
             "-",
-        ]
+        ])
         return cmd
 
     async def stream_chunks(self) -> AsyncGenerator[bytes, None]:

@@ -11,6 +11,7 @@ class RoomConfig(BaseModel):
     source_lang: str = Field("es-419", description="Idioma de origen (ej. 'es-419', 'en', o vacía para auto)")
     target_langs: List[str] = Field(default_factory=lambda: ["es", "en"], description="Idiomas de subtitulado disponibles")
     custom_vocabulary: List[str] = Field(default_factory=list, description="Términos técnicos para sesgar ASR")
+    loop: bool = Field(True, description="Si es True y la fuente es un archivo, repite el audio en bucle continuo")
 
 
 class Settings(BaseSettings):

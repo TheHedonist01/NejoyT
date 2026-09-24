@@ -6,6 +6,7 @@ rooms:
     target_langs:
       - "es"
       - "en"
+    loop: true
     custom_vocabulary:
       - "Nerdearla"
       - "Kubernetes"
@@ -20,6 +21,7 @@ rooms:
     target_langs:
       - "es"
       - "en"
+    loop: true
     custom_vocabulary:
       - "Nerdearla"
       - "Gemini"

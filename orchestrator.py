@@ -40,7 +40,7 @@ class SessionWorker:
         self._tasks: List[asyncio.Task] = []
         self._stop_event = asyncio.Event()
 
-        self.audio_source = AudioSource(room.source_uri, is_live_stream=False)
+        self.audio_source = AudioSource(room.source_uri, is_live_stream=False, loop=room.loop)
         self.asr = SeamlessRotationASR(
             language=room.source_lang,
             custom_vocabulary=room.custom_vocabulary
@@ -97,7 +97,7 @@ class SessionWorker:
             pass
         except Exception as e:
             self.errors_count += 1
-            logger.error("[%s] Error en ingesta de audio: %s", self.room.id, e)
+            logger.error("[%s] Error en ingesta de audio:", self.room.id, exc_info=True)
 
     async def _event_processor(self) -> None:
         """Procesa los eventos emitidos por el ASR, traduce frases finales y publica en el bus."""
