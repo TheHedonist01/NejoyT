@@ -76,21 +76,28 @@ class GeminiLiveASR(ASRBackend):
                     send_task = asyncio.create_task(self._send_loop(session))
                     recv_task = asyncio.create_task(self._receive_loop(session))
 
-                    done, pending = await asyncio.wait(
-                        [send_task, recv_task],
-                        return_when=asyncio.FIRST_COMPLETED
-                    )
+                    # Mantener la sesión abierta hasta que se solicite detención,
+                    # o el receptor termine (cierre de socket / error del servidor).
+                    # send_task finalizando (ej. fin de archivo) no debe matar al receptor.
+                    while not self._stop_requested.is_set():
+                        if recv_task.done():
+                            exc = recv_task.exception()
+                            if exc:
+                                raise exc
+                            break
+                        if send_task.done():
+                            exc = send_task.exception()
+                            if exc:
+                                raise exc
+                        await asyncio.sleep(0.1)
 
-                    for task in pending:
-                        task.cancel()
-                        try:
-                            await task
-                        except (asyncio.CancelledError, Exception):
-                            pass
+                    send_task.cancel()
+                    recv_task.cancel()
+                    await asyncio.gather(send_task, recv_task, return_exceptions=True)
 
-                    # Si salimos por detención explícita, no reintentamos
                     if self._stop_requested.is_set():
                         break
+
 
             except asyncio.CancelledError:
                 break

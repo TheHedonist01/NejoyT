@@ -85,14 +85,16 @@ class GeminiTranslator:
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
-                    temperature=0.2,  # Baja temperatura para traducciones precisas y deterministas
+                    temperature=0.1,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0)
                 )
             )
-            # Timeout estricto para subtítulos en vivo (evita retrasos si la nube se demora)
-            response = await asyncio.wait_for(call, timeout=3.5)
+            # Timeout para subtítulos en vivo (evita retrasos acumulados)
+            response = await asyncio.wait_for(call, timeout=5.0)
             translated_text = response.text.strip().strip('"') if response.text else cleaned
             self._history.append(cleaned)
             return translated_text
+
 
         except (asyncio.TimeoutError, Exception) as e:
             logger.warning("Fallo o timeout en traducción con Gemini Flash (%s): %s. Devolviendo original.", self.model, e)
@@ -102,3 +104,10 @@ class GeminiTranslator:
     def clear_context(self) -> None:
         """Limpia el buffer de contexto de oraciones previas."""
         self._history.clear()
+
+    def update_glossary(self, terms: List[str]) -> None:
+        """Actualiza el glosario de términos técnicos en caliente."""
+        glossary_set = set(self.DEFAULT_GLOSSARY + terms)
+        self.glossary = sorted(list(glossary_set))
+        logger.info("Glosario de traducción actualizado (%d términos)", len(self.glossary))
+

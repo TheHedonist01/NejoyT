@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import time
 import yaml
 from typing import Dict, List, Optional
 from pydantic import BaseModel
@@ -10,7 +11,7 @@ from asr.rotation import SeamlessRotationASR
 from translate.gemini_text import GeminiTranslator
 from bus import event_bus, SubtitleEvent
 from store import subtitle_store
-from config import RoomConfig
+from config import RoomConfig, RoomPatch, RoomState, SourceKind
 
 logger = logging.getLogger("nerdearla.orchestrator")
 
@@ -18,75 +19,118 @@ logger = logging.getLogger("nerdearla.orchestrator")
 class RoomStatus(BaseModel):
     id: str
     name: str
+    kind: SourceKind
     source_uri: str
     source_lang: str
     target_langs: List[str]
+    custom_vocabulary: List[str]
+    state: RoomState
     is_running: bool
     subscribers: int
     subtitles_count: int
     errors_count: int
+    started_at: Optional[float] = None
+    uptime_seconds: Optional[int] = None
 
 
 class SessionWorker:
     """
-    Trabajador asíncrono que encapsula el pipeline completo de una sala:
+    Trabajador asíncrono que encapsula el ciclo de vida y el pipeline de una sala:
     AudioSource (FFmpeg) -> SeamlessRotationASR -> GeminiTranslator -> EventBus + SubtitleStore
     """
 
     def __init__(self, room: RoomConfig):
         self.room = room
-        self.is_running = False
-        self.errors_count = 0
+        self.state: RoomState = RoomState.STOPPED
+        self.is_running: bool = False
+        self.errors_count: int = 0
+        self.started_at: Optional[float] = None
         self._tasks: List[asyncio.Task] = []
         self._stop_event = asyncio.Event()
 
-        self.audio_source = AudioSource(room.source_uri, is_live_stream=False, loop=room.loop)
-        self.asr = SeamlessRotationASR(
-            language=room.source_lang,
-            custom_vocabulary=room.custom_vocabulary
-        )
+        self.audio_source: Optional[AudioSource] = None
+        self.asr: Optional[SeamlessRotationASR] = None
         self.translator = GeminiTranslator(
             custom_glossary=room.custom_vocabulary
         )
 
-    async def start(self) -> None:
-        """Inicia el pipeline de la sala de forma aislada."""
-        if self.is_running:
-            return
+    def _set_state(self, new_state: RoomState, reason: str = "") -> None:
+        """Transición explícita de estado y emisión a suscriptores WebSocket."""
+        old_state = self.state
+        self.state = new_state
+        logger.info("[%s] Transición de estado: %s -> %s (%s)", self.room.id, old_state.value, new_state.value, reason)
 
-        self.is_running = True
-        self._stop_event.clear()
-        subtitle_store.start_room_clock(self.room.id)
-
-        logger.info("[%s] Iniciando SessionWorker para '%s'...", self.room.id, self.room.name)
-        await self.asr.start()
-
-        # Publicar evento de estado inicial
         event_bus.publish(
             self.room.id,
             SubtitleEvent(
                 room_id=self.room.id,
                 event_type="status",
-                text="Transmisión iniciada",
+                text=f"Sala en estado {new_state.value}",
                 language=self.room.source_lang,
-                metadata={"status": "online"}
+                metadata={"status": new_state.value, "reason": reason}
             )
         )
 
-        feeder_task = asyncio.create_task(
-            self._audio_feeder(),
-            name=f"worker-feeder-{self.room.id}"
-        )
-        processor_task = asyncio.create_task(
-            self._event_processor(),
-            name=f"worker-processor-{self.room.id}"
-        )
-        self._tasks = [feeder_task, processor_task]
+    def _on_source_degraded(self) -> None:
+        if self.state == RoomState.ACTIVE:
+            self._set_state(RoomState.DEGRADED, "Reconectando fuente de audio...")
+
+    def _on_source_recovered(self) -> None:
+        if self.state == RoomState.DEGRADED:
+            self._set_state(RoomState.ACTIVE, "Fuente de audio restablecida")
+
+    async def start(self) -> None:
+        """Inicia el pipeline de la sala de forma aislada."""
+        if self.is_running or self.state in (RoomState.STARTING, RoomState.ACTIVE):
+            logger.warning("[%s] Intento de iniciar worker que ya está activo o arrancando.", self.room.id)
+            return
+
+        self.is_running = True
+        self._stop_event.clear()
+        self.started_at = time.time()
+        self._set_state(RoomState.STARTING, "Inicializando conexiones y ASR")
+        subtitle_store.start_room_clock(self.room.id)
+
+        try:
+            self.audio_source = AudioSource(
+                source_uri=self.room.source_uri,
+                kind=self.room.kind,
+                loop=self.room.loop,
+                on_degraded=self._on_source_degraded,
+                on_recovered=self._on_source_recovered
+            )
+
+            self.asr = SeamlessRotationASR(
+                language=self.room.source_lang,
+                custom_vocabulary=self.room.custom_vocabulary
+            )
+
+            await self.asr.start()
+
+            feeder_task = asyncio.create_task(
+                self._audio_feeder(),
+                name=f"worker-feeder-{self.room.id}"
+            )
+            processor_task = asyncio.create_task(
+                self._event_processor(),
+                name=f"worker-processor-{self.room.id}"
+            )
+            self._tasks = [feeder_task, processor_task]
+            self._set_state(RoomState.ACTIVE, "Transmisión y ASR en vivo")
+
+        except Exception as e:
+            self.errors_count += 1
+            self._set_state(RoomState.ERROR, f"Error al arrancar: {e}")
+            logger.error("[%s] Error crítico al arrancar worker: %s", self.room.id, e, exc_info=True)
+            await self.stop()
 
     async def _audio_feeder(self) -> None:
         """Lee el audio de FFmpeg y lo envía continuamente a SeamlessRotationASR."""
         try:
+            assert self.audio_source is not None
+            assert self.asr is not None
             logger.info("[%s] Comenzando ingesta de audio...", self.room.id)
+
             async for chunk in self.audio_source.stream_chunks():
                 if self._stop_event.is_set():
                     break
@@ -97,11 +141,13 @@ class SessionWorker:
             pass
         except Exception as e:
             self.errors_count += 1
-            logger.error("[%s] Error en ingesta de audio:", self.room.id, exc_info=True)
+            logger.error("[%s] Error en ingesta de audio: %s", self.room.id, e, exc_info=True)
+            self._set_state(RoomState.DEGRADED, f"Fallo en ingesta de audio: {e}")
 
     async def _event_processor(self) -> None:
         """Procesa los eventos emitidos por el ASR, traduce frases finales y publica en el bus."""
         try:
+            assert self.asr is not None
             async for asr_event in self.asr.events():
                 if self._stop_event.is_set():
                     break
@@ -165,12 +211,19 @@ class SessionWorker:
 
     async def stop(self) -> None:
         """Detiene de forma limpia los subprocesos y tareas del worker."""
-        if not self.is_running:
+        if not self.is_running and self.state == RoomState.STOPPED:
             return
 
+        self._set_state(RoomState.STOPPING, "Deteniendo procesos")
         self._stop_event.set()
-        await self.audio_source.stop()
-        await self.asr.stop()
+
+        if self.audio_source:
+            await self.audio_source.stop()
+            self.audio_source = None
+
+        if self.asr:
+            await self.asr.stop()
+            self.asr = None
 
         for task in self._tasks:
             task.cancel()
@@ -178,37 +231,57 @@ class SessionWorker:
                 await task
             except asyncio.CancelledError:
                 pass
+        self._tasks.clear()
 
         self.is_running = False
-        logger.info("[%s] SessionWorker detenido.", self.room.id)
+        self._set_state(RoomState.STOPPED, "Sesión detenida")
+        logger.info("[%s] SessionWorker detenido por completo.", self.room.id)
+
+    def patch(self, patch: RoomPatch) -> None:
+        """Aplica modificaciones en caliente a la sala."""
+        if patch.name is not None:
+            self.room.name = patch.name
+        if patch.target_langs is not None:
+            self.room.target_langs = patch.target_langs
+        if patch.custom_vocabulary is not None:
+            self.room.custom_vocabulary = patch.custom_vocabulary
+            self.translator.update_glossary(patch.custom_vocabulary)
+        logger.info("[%s] Parámetros de sala actualizados: %s", self.room.id, patch)
 
     def get_status(self) -> RoomStatus:
-        """Retorna el estado operativo del worker."""
+        """Retorna el estado operativo detallado del worker."""
         history = subtitle_store.get_history(self.room.id)
+        uptime = int(time.time() - self.started_at) if (self.is_running and self.started_at) else None
+
         return RoomStatus(
             id=self.room.id,
             name=self.room.name,
+            kind=self.room.kind,
             source_uri=self.room.source_uri,
             source_lang=self.room.source_lang,
             target_langs=self.room.target_langs,
+            custom_vocabulary=self.room.custom_vocabulary,
+            state=self.state,
             is_running=self.is_running,
             subscribers=event_bus.subscriber_count(self.room.id),
             subtitles_count=len(history),
-            errors_count=self.errors_count
+            errors_count=self.errors_count,
+            started_at=self.started_at,
+            uptime_seconds=uptime
         )
 
 
 class Orchestrator:
     """
     Supervisor central de sesiones multi-sala.
-    Carga rooms.yaml y gestiona N SessionWorkers de forma aislada e independiente.
+    Carga rooms.yaml como semilla y gestiona el ciclo de vida de N SessionWorkers.
     """
 
     def __init__(self):
         self._workers: Dict[str, SessionWorker] = {}
 
     def load_rooms(self, config_path: str = "rooms.yaml") -> None:
-        """Lee la configuración de salas desde YAML."""
+        """Lee la configuración inicial de salas desde YAML."""
         if not os.path.exists(config_path):
             logger.warning("Archivo de configuración %s no encontrado.", config_path)
             return
@@ -221,22 +294,68 @@ class Orchestrator:
             room = RoomConfig(**r_dict)
             if room.id not in self._workers:
                 self._workers[room.id] = SessionWorker(room)
-                logger.info("Sala registrada en orquestador: %s (%s)", room.id, room.name)
+                logger.info("Sala registrada en orquestador: %s ('%s', auto_start=%s)", room.id, room.name, room.auto_start)
 
     async def start_all(self) -> None:
-        """Inicia todas las salas configuradas."""
-        logger.info("Iniciando todos los SessionWorkers (%d salas)...", len(self._workers))
-        start_coros = [worker.start() for worker in self._workers.values()]
-        await asyncio.gather(*start_coros, return_exceptions=True)
+        """Inicia únicamente las salas que tienen auto_start=True."""
+        auto_workers = [w for w in self._workers.values() if w.room.auto_start]
+        if auto_workers:
+            logger.info("Iniciando %d salas configuradas con auto_start...", len(auto_workers))
+            await asyncio.gather(*(w.start() for w in auto_workers), return_exceptions=True)
+        else:
+            logger.info("Salas cargadas en espera (STANDBY). Listas para arranque manual desde /admin.")
 
     async def stop_all(self) -> None:
-        """Detiene todas las salas."""
+        """Detiene todas las salas activas."""
         logger.info("Deteniendo todos los SessionWorkers...")
         stop_coros = [worker.stop() for worker in self._workers.values()]
         await asyncio.gather(*stop_coros, return_exceptions=True)
 
     def get_worker(self, room_id: str) -> Optional[SessionWorker]:
         return self._workers.get(room_id)
+
+    async def start_room(self, room_id: str) -> bool:
+        worker = self.get_worker(room_id)
+        if not worker:
+            return False
+        await worker.start()
+        return True
+
+    async def stop_room(self, room_id: str) -> bool:
+        worker = self.get_worker(room_id)
+        if not worker:
+            return False
+        await worker.stop()
+        return True
+
+    async def create_room(self, room_config: RoomConfig, start: bool = False) -> SessionWorker:
+        if room_config.id in self._workers:
+            raise ValueError(f"La sala '{room_config.id}' ya existe.")
+
+        worker = SessionWorker(room_config)
+        self._workers[room_config.id] = worker
+        logger.info("Nueva sala creada en caliente: %s ('%s')", room_config.id, room_config.name)
+
+        if start or room_config.auto_start:
+            await worker.start()
+
+        return worker
+
+    async def delete_room(self, room_id: str) -> bool:
+        worker = self.get_worker(room_id)
+        if not worker:
+            return False
+        await worker.stop()
+        del self._workers[room_id]
+        logger.info("Sala eliminada: %s", room_id)
+        return True
+
+    def patch_room(self, room_id: str, patch: RoomPatch) -> bool:
+        worker = self.get_worker(room_id)
+        if not worker:
+            return False
+        worker.patch(patch)
+        return True
 
     def list_rooms(self) -> List[RoomStatus]:
         return [w.get_status() for w in self._workers.values()]

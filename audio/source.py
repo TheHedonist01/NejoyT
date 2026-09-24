@@ -1,17 +1,92 @@
 import asyncio
 import logging
 import os
+import platform
+import re
 import shutil
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, Callable, Dict, List, Optional
+from config import SourceKind
 
 logger = logging.getLogger("audio.source")
 
 
+def resolve_ffmpeg_bin() -> str:
+    """Busca el ejecutable de ffmpeg en rutas conocidas de WinGet o en el PATH."""
+    local_app_data = os.getenv("LOCALAPPDATA", "")
+    gyan_full = os.path.join(
+        local_app_data,
+        r"Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.2-full_build\bin\ffmpeg.exe"
+    )
+    if os.path.isfile(gyan_full):
+        return gyan_full
+
+    packages_dir = os.path.join(local_app_data, r"Microsoft\WinGet\Packages")
+    if os.path.isdir(packages_dir):
+        for root, _, files in os.walk(packages_dir):
+            if "ffmpeg.exe" in files:
+                return os.path.join(root, "ffmpeg.exe")
+
+    return shutil.which("ffmpeg") or "ffmpeg"
+
+
+def list_audio_devices() -> List[Dict[str, str]]:
+    """
+    Detecta y lista los dispositivos de entrada de audio disponibles en el sistema operativo.
+    En Windows usa DirectShow; en Linux/Mac devuelve interfaces estándar.
+    """
+    devices: List[Dict[str, str]] = []
+    system = platform.system()
+
+    if system == "Windows":
+        ffmpeg_bin = resolve_ffmpeg_bin()
+        try:
+            res = shutil.which(ffmpeg_bin)
+            if not res and not os.path.isfile(ffmpeg_bin):
+                return devices
+
+            # Ejecutar ffmpeg para listar dispositivos dshow
+            import subprocess
+            proc = subprocess.run(
+                [ffmpeg_bin, "-list_devices", "true", "-f", "dshow", "-i", "dummy"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="ignore"
+            )
+
+            lines = proc.stderr.splitlines()
+            for i, line in enumerate(lines):
+                if "(audio)" in line:
+                    match_name = re.search(r'\"([^\"]+)\"\s+\(audio\)', line)
+                    if match_name:
+                        name = match_name.group(1)
+                        dev_id = name
+                        # Si la siguiente línea contiene el Alternative name (@device_cm_...), usarlo como id seguro
+                        if i + 1 < len(lines) and "Alternative name" in lines[i + 1]:
+                            match_alt = re.search(r'Alternative name\s+\"([^\"]+)\"', lines[i + 1])
+                            if match_alt:
+                                dev_id = match_alt.group(1)
+                        devices.append({
+                            "id": dev_id,
+                            "name": name,
+                            "kind": "dshow"
+                        })
+        except Exception as e:
+            logger.warning("No se pudieron listar los dispositivos de audio DirectShow: %s", e)
+    elif system == "Linux":
+        devices.append({"id": "default", "name": "PulseAudio Default", "kind": "pulse"})
+    elif system == "Darwin":
+        devices.append({"id": ":0", "name": "Default Audio Device", "kind": "avfoundation"})
+
+    return devices
+
+
 class AudioSource:
     """
-    Subproceso FFmpeg que normaliza cualquier fuente de audio
-    (archivo local, URL HTTP/HLS, stream RTMP o micrófono)
-    a PCM s16le, 16.000 Hz, mono.
+    Fábrica y supervisor de fuentes de audio para conferencias.
+    Normaliza cualquier entrada (archivo, micrófono DirectShow o stream RTMP/HLS)
+    a PCM s16le, 16.000 Hz, mono (3.200 B por chunk de 100 ms).
+    Implementa cola acotada con backpressure y supervisor de reconexión.
     """
 
     SAMPLE_RATE = 16000
@@ -20,53 +95,58 @@ class AudioSource:
     BYTES_PER_SECOND = SAMPLE_RATE * BYTES_PER_SAMPLE * CHANNELS  # 32.000 B/s
     CHUNK_DURATION_SEC = 0.1  # 100 ms
     CHUNK_SIZE_BYTES = int(SAMPLE_RATE * CHUNK_DURATION_SEC * BYTES_PER_SAMPLE)  # 3.200 B
+    MAX_QUEUE_CHUNKS = 50  # ~5 segundos de buffer máximo
 
-    def __init__(self, source_uri: str, is_live_stream: bool = False, loop: bool = False):
-        """
-        :param source_uri: Archivo local o URL de streaming.
-        :param is_live_stream: Si es True, no aplica pacing adaptativo (el stream ya viene a tiempo real).
-        :param loop: Si es True y es un archivo, reproduce en bucle continuo para demostraciones en vivo.
-        """
+    def __init__(
+        self,
+        source_uri: str,
+        kind: SourceKind = SourceKind.FILE,
+        loop: bool = False,
+        on_degraded: Optional[Callable[[], None]] = None,
+        on_recovered: Optional[Callable[[], None]] = None,
+    ):
         self.source_uri = source_uri
-        self.is_live_stream = is_live_stream
+        self.kind = kind
         self.loop = loop
+        self.on_degraded = on_degraded
+        self.on_recovered = on_recovered
+
+        self._queue: asyncio.Queue[Optional[bytes]] = asyncio.Queue(maxsize=self.MAX_QUEUE_CHUNKS)
         self._process: Optional[asyncio.subprocess.Process] = None
+        self._reader_task: Optional[asyncio.Task] = None
         self._stop_event = asyncio.Event()
 
-    def _resolve_ffmpeg_bin(self) -> str:
-        # 1. Chequear ruta directa del paquete completo instalado por WinGet
-        local_app_data = os.getenv("LOCALAPPDATA", "")
-        gyan_full = os.path.join(
-            local_app_data,
-            r"Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-9.0.2-full_build\bin\ffmpeg.exe"
-        )
-        if os.path.isfile(gyan_full):
-            return gyan_full
+    def _build_ffmpeg_cmd(self) -> List[str]:
+        ffmpeg_bin = resolve_ffmpeg_bin()
+        cmd = [ffmpeg_bin, "-hide_banner", "-loglevel", "error"]
 
-        # 2. Buscar en WinGet/Packages genérico
-        packages_dir = os.path.join(local_app_data, r"Microsoft\WinGet\Packages")
-        if os.path.isdir(packages_dir):
-            for root, _, files in os.walk(packages_dir):
-                if "ffmpeg.exe" in files:
-                    return os.path.join(root, "ffmpeg.exe")
+        if self.kind == SourceKind.FILE:
+            # Para archivos locales, -re mantiene el tiempo real del audio
+            cmd.append("-re")
+            if self.loop:
+                cmd.extend(["-stream_loop", "-1"])
+            cmd.extend(["-i", self.source_uri])
 
-        # 3. Buscar en PATH del sistema
-        return shutil.which("ffmpeg") or "ffmpeg"
+        elif self.kind == SourceKind.MIC:
+            system = platform.system()
+            if system == "Windows":
+                # Si el URI ya viene con @device_... o audio=, formatear adecuadamente
+                input_dev = self.source_uri if self.source_uri.startswith("audio=") else f"audio={self.source_uri}"
+                cmd.extend(["-f", "dshow", "-i", input_dev])
+            elif system == "Darwin":
+                cmd.extend(["-f", "avfoundation", "-i", self.source_uri or ":0"])
+            else:
+                cmd.extend(["-f", "pulse", "-i", self.source_uri or "default"])
 
-    def _resolve_ffmpeg_cmd(self) -> list[str]:
-        ffmpeg_bin = self._resolve_ffmpeg_bin()
+        elif self.kind == SourceKind.STREAM:
+            # Receptor RTMP en escucha para OBS o ingest HLS/URL
+            if "rtmp://" in self.source_uri and ("0.0.0.0" in self.source_uri or ":1935" in self.source_uri):
+                cmd.extend(["-f", "flv", "-listen", "1", "-i", self.source_uri])
+            else:
+                cmd.extend(["-i", self.source_uri])
 
-        cmd = [
-            ffmpeg_bin,
-            "-hide_banner",
-            "-loglevel", "error",
-        ]
-
-        if self.loop and not self.is_live_stream:
-            cmd.extend(["-stream_loop", "-1"])
-
+        # Parámetros estándar comunes para entrega a Gemini Live ASR
         cmd.extend([
-            "-i", self.source_uri,
             "-f", "s16le",
             "-acodec", "pcm_s16le",
             "-ar", str(self.SAMPLE_RATE),
@@ -75,49 +155,117 @@ class AudioSource:
         ])
         return cmd
 
+    async def _run_supervisor(self) -> None:
+        """
+        Ciclo de supervisión y lectura de chunks PCM con reconexión automática
+        para micrófonos y streams en vivo.
+        """
+        backoff = 1.0
+        max_backoff = 8.0
+
+        while not self._stop_event.is_set():
+            cmd = self._build_ffmpeg_cmd()
+            logger.info("Iniciando subproceso FFmpeg [%s]: %s", self.kind.value, " ".join(cmd))
+
+            try:
+                self._process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+            except Exception as e:
+                logger.error("No se pudo iniciar subproceso FFmpeg: %s", e)
+                if self.kind == SourceKind.FILE or self._stop_event.is_set():
+                    break
+                if self.on_degraded:
+                    self.on_degraded()
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 1.5, max_backoff)
+                continue
+
+            assert self._process.stdout is not None
+            consecutive_reads = 0
+
+            try:
+                while not self._stop_event.is_set():
+                    try:
+                        chunk = await self._process.stdout.readexactly(self.CHUNK_SIZE_BYTES)
+                    except asyncio.IncompleteReadError as e:
+                        if e.partial:
+                            await self._enqueue_chunk(e.partial)
+                        break
+
+                    if not chunk:
+                        break
+
+                    consecutive_reads += 1
+                    if consecutive_reads == 10 and self.on_recovered:
+                        self.on_recovered()
+                        backoff = 1.0
+
+                    await self._enqueue_chunk(chunk)
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.warning("Error leyendo flujo de FFmpeg [%s]: %s", self.kind.value, e)
+            finally:
+                if self._process and self._process.returncode is None:
+                    try:
+                        self._process.terminate()
+                        await asyncio.wait_for(self._process.wait(), timeout=1.0)
+                    except Exception:
+                        try:
+                            self._process.kill()
+                        except Exception:
+                            pass
+
+            # Si es un archivo y no está en loop o si se pidió stop explícito, salir
+            if self.kind == SourceKind.FILE or self._stop_event.is_set():
+                break
+
+            # Para MIC o STREAM, salida no solicitada -> estado degradado y reconexión
+            logger.warning(
+                "Fuente de audio en vivo finalizó o se desconectó. Reintentando en %.1fs...",
+                backoff
+            )
+            if self.on_degraded:
+                self.on_degraded()
+
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 1.5, max_backoff)
+
+        # Señal de fin de flujo
+        await self._enqueue_chunk(None)
+
+    async def _enqueue_chunk(self, chunk: Optional[bytes]) -> None:
+        """Encola un chunk. Si la cola está llena, descarta el más antiguo (backpressure)."""
+        if chunk is not None and self._queue.full():
+            try:
+                self._queue.get_nowait()
+                logger.warning("Buffer de audio lleno (50 chunks / 5s). Descartando chunk antiguo para mantener baja latencia.")
+            except asyncio.QueueEmpty:
+                pass
+
+        await self._queue.put(chunk)
+
     async def stream_chunks(self) -> AsyncGenerator[bytes, None]:
         """
-        Inicia el proceso FFmpeg y genera bloques PCM de 100 ms (3.200 bytes).
+        Inicia la tarea del supervisor y produce un flujo de bloques PCM (3.200 bytes).
         """
-        cmd = self._resolve_ffmpeg_cmd()
-        logger.info("Iniciando FFmpeg con comando: %s", " ".join(cmd))
-
-        self._process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-
-        assert self._process.stdout is not None
-        assert self._process.stderr is not None
+        self._stop_event.clear()
+        self._reader_task = asyncio.create_task(self._run_supervisor(), name=f"ffmpeg-supervisor-{self.kind}")
 
         start_time = asyncio.get_running_loop().time()
         bytes_yielded = 0
 
         try:
             while not self._stop_event.is_set():
-                try:
-                    data = await self._process.stdout.readexactly(self.CHUNK_SIZE_BYTES)
-                except asyncio.IncompleteReadError as e:
-                    if e.partial:
-                        yield e.partial
-                        bytes_yielded += len(e.partial)
+                chunk = await self._queue.get()
+                if chunk is None:
                     break
-
-                if not data:
-                    break
-
-                yield data
-                bytes_yielded += len(data)
-
-                # Pacing adaptativo para archivos locales (evita adelanto temporal respecto al reloj real)
-                if not self.is_live_stream:
-                    expected_elapsed = bytes_yielded / self.BYTES_PER_SECOND
-                    actual_elapsed = asyncio.get_running_loop().time() - start_time
-                    delay = expected_elapsed - actual_elapsed
-                    if delay > 0:
-                        await asyncio.sleep(delay)
-
+                yield chunk
+                bytes_yielded += len(chunk)
         except asyncio.CancelledError:
             logger.info("Stream de audio cancelado por el llamador.")
             raise
@@ -126,18 +274,27 @@ class AudioSource:
             elapsed = max(asyncio.get_running_loop().time() - start_time, 0.001)
             rate = bytes_yielded / elapsed
             logger.info(
-                "FFmpeg finalizado. Total bytes: %d, tiempo: %.2fs, tasa promedio: %.1f B/s (esperado ~32.000 B/s)",
-                bytes_yielded, elapsed, rate
+                "AudioSource [%s] finalizado. Total bytes: %d, tiempo: %.2fs, tasa promedio: %.1f B/s",
+                self.kind.value, bytes_yielded, elapsed, rate
             )
 
     async def stop(self) -> None:
-        """Detiene el subproceso limpiamente."""
+        """Detiene de forma segura el subproceso y la tarea lectora."""
         self._stop_event.set()
         if self._process and self._process.returncode is None:
             try:
                 self._process.terminate()
-                await asyncio.wait_for(self._process.wait(), timeout=2.0)
-            except (asyncio.TimeoutError, ProcessLookupError):
-                if self._process.returncode is None:
+                await asyncio.wait_for(self._process.wait(), timeout=1.0)
+            except Exception:
+                try:
                     self._process.kill()
                     await self._process.wait()
+                except Exception:
+                    pass
+
+        if self._reader_task and not self._reader_task.done():
+            self._reader_task.cancel()
+            try:
+                await self._reader_task
+            except asyncio.CancelledError:
+                pass

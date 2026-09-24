@@ -13,6 +13,9 @@
       --text: #f8fafc;
       --text-interim: #94a3b8;
       --text-time: #64748b;
+      --warning: #ffab00;
+      --danger: #ef4444;
+      --success: #10b981;
       --font-size: 1.5rem;
       --line-height: 1.6;
     }
@@ -107,15 +110,40 @@
       font-weight: 600;
       padding: 0.35rem 0.7rem;
       border-radius: 9999px;
-      background: rgba(16, 185, 129, 0.15);
-      color: #10b981;
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      background: rgba(148, 163, 184, 0.15);
+      color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
 
-    .status-badge.disconnected {
+    .status-badge.active {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .status-badge.starting, .status-badge.degraded {
+      background: rgba(255, 171, 0, 0.15);
+      color: var(--warning);
+      border-color: rgba(255, 171, 0, 0.3);
+    }
+
+    .status-badge.error, .status-badge.disconnected {
       background: rgba(239, 68, 68, 0.15);
-      color: #ef4444;
+      color: var(--danger);
       border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    /* BANNER DE ESTADO INFORMATIVO */
+    #status-banner {
+      display: none;
+      padding: 1rem 1.5rem;
+      background: rgba(255, 171, 0, 0.1);
+      border-bottom: 1px solid rgba(255, 171, 0, 0.3);
+      color: var(--warning);
+      text-align: center;
+      font-size: 0.95rem;
     }
 
     /* CONTENEDOR DE SUBTÍTULOS */
@@ -128,6 +156,23 @@
       display: flex;
       flex-direction: column;
       gap: 1.25rem;
+    }
+
+    .standby-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      margin: auto 0;
+      padding: 4rem 1rem;
+      color: var(--text-interim);
+    }
+
+    .standby-placeholder h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: var(--text);
     }
 
     .subtitle-block {
@@ -161,7 +206,9 @@
       overflow: hidden;
     }
 
-    body.overlay-mode header.toolbar {
+    body.overlay-mode header.toolbar,
+    body.overlay-mode #status-banner,
+    body.overlay-mode .standby-placeholder {
       display: none !important;
     }
 
@@ -204,7 +251,8 @@
       <label for="lang-select" style="font-size: 0.85rem; color: var(--text-interim);">Idioma:</label>
       <select id="lang-select">
         <option value="es" selected>Español</option>
-        <option value="en">English (Original)</option>
+        <option value="en">English</option>
+        <option value="pt">Português</option>
       </select>
 
       <button id="font-dec" title="Reducir fuente">A-</button>
@@ -217,7 +265,14 @@
     </div>
   </header>
 
+  <div id="status-banner"></div>
+
   <main class="subtitles-container" id="subtitles">
+    <div id="standby-msg" class="standby-placeholder" style="display: none;">
+      <h2>Sala en Espera (Standby)</h2>
+      <p>La charla aún no ha comenzado. Los subtítulos aparecerán automáticamente aquí en cuanto inicie el orador.</p>
+    </div>
+
     <!-- Subtítulos finalizados -->
     <div id="final-subtitles"></div>
     <!-- Subtítulo interino en vivo -->
@@ -233,7 +288,6 @@
       document.body.classList.add('overlay-mode');
     }
 
-    // Configuración de visualización y accesibilidad
     let fontSize = 1.5;
     const fontIncBtn = document.getElementById('font-inc');
     const fontDecBtn = document.getElementById('font-dec');
@@ -243,6 +297,8 @@
     const finalContainer = document.getElementById('final-subtitles');
     const statusBadge = document.getElementById('status-badge');
     const statusText = document.getElementById('status-text');
+    const statusBanner = document.getElementById('status-banner');
+    const standbyMsg = document.getElementById('standby-msg');
 
     fontIncBtn.addEventListener('click', () => {
       fontSize = Math.min(fontSize + 0.25, 3.0);
@@ -272,13 +328,42 @@
       }
     }
 
+    function updateRoomStateUI(state, reason = "") {
+      statusBadge.className = 'status-badge';
+      statusBanner.style.display = 'none';
+
+      if (state === 'active') {
+        statusBadge.classList.add('active');
+        statusText.textContent = '● EN VIVO';
+        standbyMsg.style.display = 'none';
+      } else if (state === 'starting') {
+        statusBadge.classList.add('starting');
+        statusText.textContent = '◌ INICIANDO...';
+        standbyMsg.style.display = finalContainer.children.length === 0 ? 'flex' : 'none';
+      } else if (state === 'degraded') {
+        statusBadge.classList.add('degraded');
+        statusText.textContent = '⚠ RECONECTANDO';
+        statusBanner.style.display = 'block';
+        statusBanner.textContent = 'Reconectando fuente de audio... La transcripción se retoma en breve.';
+      } else if (state === 'stopped') {
+        statusBadge.textContent = '■ EN ESPERA';
+        if (finalContainer.children.length === 0) {
+          standbyMsg.style.display = 'flex';
+        }
+      } else if (state === 'error') {
+        statusBadge.classList.add('error');
+        statusText.textContent = '✕ ERROR';
+        statusBanner.style.display = 'block';
+        statusBanner.textContent = reason || 'La sala experimentó un error.';
+      }
+    }
+
     // WebSocket conexión
     let ws = null;
     let selectedLang = langSelect.value;
 
     langSelect.addEventListener('change', () => {
       selectedLang = langSelect.value;
-      // Re-conectar con el parámetro de idioma
       connectWebSocket();
     });
 
@@ -289,33 +374,38 @@
 
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/ws/${roomId}?lang=${selectedLang}`;
-      
-      statusBadge.className = 'status-badge';
-      statusText.textContent = 'Conectando...';
 
       ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
-        statusBadge.className = 'status-badge';
-        statusText.textContent = 'EN VIVO';
+        // Al conectar por ws, consultamos el estado real
+        fetchRoomInfo();
       };
 
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
 
+          if (data.event_type === 'status') {
+            const st = data.metadata ? data.metadata.status : 'active';
+            const reason = data.metadata ? data.metadata.reason : '';
+            updateRoomStateUI(st, reason);
+            return;
+          }
+
           if (data.event_type === 'interim') {
-            // Mostrar hipótesis parcial en tiempo real
+            standbyMsg.style.display = 'none';
             interimEl.textContent = data.text;
             interimEl.style.display = 'block';
             scrollToBottom();
           } 
           else if (data.event_type === 'final' || data.event_type === 'translation') {
-            // Si el cliente eligió traducción y llega translation, o eligió original y llega final
+            standbyMsg.style.display = 'none';
             const isRelevant = 
               (selectedLang === data.language) ||
               (data.event_type === 'final' && selectedLang === 'en' && data.language.startsWith('en')) ||
-              (data.event_type === 'final' && selectedLang === 'es' && data.language.startsWith('es'));
+              (data.event_type === 'final' && selectedLang === 'es' && data.language.startsWith('es')) ||
+              (data.event_type === 'final' && selectedLang === 'pt' && data.language.startsWith('pt'));
 
             if (isRelevant || !data.language) {
               interimEl.style.display = 'none';
@@ -326,8 +416,7 @@
               p.textContent = data.text;
               finalContainer.appendChild(p);
 
-              // Mantener máximo 40 frases en pantalla para evitar consumo de memoria
-              if (finalContainer.children.length > 40) {
+              if (finalContainer.children.length > 50) {
                 finalContainer.removeChild(finalContainer.firstChild);
               }
               scrollToBottom();
@@ -354,19 +443,31 @@
     async function fetchRoomInfo() {
       try {
         const res = await fetch('/api/rooms');
+        if (!res.ok) return;
         const data = await res.json();
         const current = data.rooms.find(r => r.id === roomId);
         if (current) {
           document.getElementById('room-title').textContent = current.name;
-          document.title = `${current.name} — Subtítulos`;
+          document.title = `${current.name} — Subtítulos Nerdearla`;
+          updateRoomStateUI(current.state);
+
+          // Ajustar idiomas disponibles en el selector
+          if (current.target_langs && current.target_langs.length > 0) {
+            const currentSelected = langSelect.value;
+            const langNames = { 'es': 'Español', 'en': 'English', 'pt': 'Português' };
+            langSelect.innerHTML = current.target_langs.map(l => `
+              <option value="${l}" ${l === currentSelected ? 'selected' : ''}>${langNames[l] || l.toUpperCase()}</option>
+            `).join('');
+          }
         }
       } catch (err) {
-        console.error(err);
+        console.error("Error al obtener info de la sala:", err);
       }
     }
 
     fetchRoomInfo();
     connectWebSocket();
+    setInterval(fetchRoomInfo, 5000);
   </script>
 </body>
 </html>

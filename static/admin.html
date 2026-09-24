@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NejoyT Admin — Centro de Control Nerdearla 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0a0d14;
+      --bg-card: #121722;
+      --bg-card-hover: #171e2c;
+      --bg-card-alt: #1a2232;
+      --border-color: #232c3f;
+      --primary: #00d2ff;
+      --primary-gradient: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+      --accent: #ff007f;
+      --success: #00e676;
+      --warning: #ffab00;
+      --danger: #ff5252;
+      --text-main: #f0f4fc;
+      --text-muted: #8d9bb0;
+      --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      background: rgba(18, 23, 34, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: var(--primary-gradient);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #000;
+      box-shadow: 0 0 16px rgba(0, 210, 255, 0.4);
+    }
+
+    .brand-title h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-title span {
+      font-size: 0.75rem;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .token-box {
+      display: flex;
+      align-items: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.25rem 0.5rem;
+      gap: 0.5rem;
+    }
+
+    .token-box label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+    }
+
+    .token-box input {
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      width: 140px;
+      outline: none;
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      padding: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--primary-gradient);
+    }
+
+    .stat-title {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--text-main);
+    }
+
+    .stat-sub {
+      font-size: 0.75rem;
+      color: var(--primary);
+    }
+
+    /* Section Bar */
+    .section-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      font-family: var(--font-sans);
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--primary-gradient);
+      color: #000;
+      box-shadow: 0 4px 12px rgba(0, 210, 255, 0.25);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 4px 18px rgba(0, 210, 255, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--primary);
+      background: rgba(0, 210, 255, 0.05);
+    }
+
+    .btn-sm {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8rem;
+      border-radius: 6px;
+    }
+
+    .btn-success {
+      background: rgba(0, 230, 118, 0.15);
+      border: 1px solid rgba(0, 230, 118, 0.4);
+      color: var(--success);
+    }
+    .btn-success:hover {
+      background: rgba(0, 230, 118, 0.25);
+    }
+
+    .btn-danger {
+      background: rgba(255, 82, 82, 0.15);
+      border: 1px solid rgba(255, 82, 82, 0.4);
+      color: var(--danger);
+    }
+    .btn-danger:hover {
+      background: rgba(255, 82, 82, 0.25);
+    }
+
+    /* Rooms Table / Grid */
+    .rooms-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .room-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: grid;
+      grid-template-columns: 2.5fr 1.5fr 1.5fr 2fr;
+      align-items: center;
+      gap: 1.5rem;
+      transition: border-color 0.2s;
+    }
+
+    .room-card:hover {
+      border-color: #34425d;
+    }
+
+    .room-info h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .room-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .room-uri {
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--primary);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-active {
+      background: rgba(0, 230, 118, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(0, 230, 118, 0.3);
+    }
+
+    .badge-active::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      background: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 1.5s infinite;
+    }
+
+    .badge-starting {
+      background: rgba(255, 171, 0, 0.15);
+      color: var(--warning);
+      border: 1px solid rgba(255, 171, 0, 0.3);
+    }
+
+    .badge-degraded {
+      background: rgba(255, 171, 0, 0.15);
+      color: var(--warning);
+      border: 1px solid rgba(255, 171, 0, 0.3);
+    }
+
+    .badge-stopped {
+      background: rgba(141, 155, 176, 0.1);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+    }
+
+    .badge-error {
+      background: rgba(255, 82, 82, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(255, 82, 82, 0.3);
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .room-metrics {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .room-metrics strong {
+      color: var(--text-main);
+      font-family: var(--font-mono);
+    }
+
+    .room-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 600px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-header h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.6rem 0.8rem;
+      border-radius: 8px;
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .form-control:focus {
+      border-color: var(--primary);
+    }
+
+    .source-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .source-option {
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      padding: 0.6rem;
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+
+    .source-option.selected {
+      border-color: var(--primary);
+      background: rgba(0, 210, 255, 0.1);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .tag-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+    }
+
+    .tag {
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border-color);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .tag-remove {
+      cursor: pointer;
+      color: var(--danger);
+    }
+
+    /* Toast Notification */
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      padding: 0.8rem 1.4rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      z-index: 2000;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    @media (max-width: 900px) {
+      .room-card {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+      .room-actions {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">N</div>
+      <div class="brand-title">
+        <h1>NejoyT Control Hub</h1>
+        <span>Nerdearla 2026 — Live Subtitling & Translation</span>
+      </div>
+    </div>
+    <div class="header-controls">
+      <div class="token-box">
+        <label for="adminToken">Admin Token</label>
+        <input type="password" id="adminToken" placeholder="Token..." value="nerdearla2026">
+      </div>
+      <a href="/" class="btn btn-outline btn-sm">Portal Audiencia</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- Telemetry Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-title">Salas Activas</span>
+        <div class="stat-value" id="statActive">0 / 0</div>
+        <span class="stat-sub" id="statUptime">Orquestador en línea</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">Modelo Streaming ASR</span>
+        <div class="stat-value" style="font-size: 1.15rem; color: var(--primary);">gemini-3.5-transcribe-live</div>
+        <span class="stat-sub">WebSocket bidireccional</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">Modelo Traducción</span>
+        <div class="stat-value" style="font-size: 1.15rem; color: #a370f7;">gemini-3.6-flash</div>
+        <span class="stat-sub">Traducción con glosario técnico</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-title">Audiencia Conectada</span>
+        <div class="stat-value" id="statAudience">0</div>
+        <span class="stat-sub">WebSockets activos</span>
+      </div>
+    </div>
+
+    <!-- Section Bar -->
+    <div class="section-bar">
+      <div class="section-title">
+        <span>Salas de Conferencia</span>
+        <span class="badge badge-active" id="syncStatus">Auto-sync 2s</span>
+      </div>
+      <div style="display: flex; gap: 0.75rem;">
+        <button class="btn btn-outline" onclick="fetchAudioDevicesModal()">🎙 Detectar Micrófonos</button>
+        <button class="btn btn-primary" onclick="openCreateModal()">+ Nueva Sala</button>
+      </div>
+    </div>
+
+    <!-- Rooms List -->
+    <div class="rooms-container" id="roomsList">
+      <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+        Cargando salas del orquestador...
+      </div>
+    </div>
+  </main>
+
+  <!-- Create Room Modal -->
+  <div class="modal-overlay" id="createModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Crear Nueva Sala de Conferencia</h2>
+        <button class="modal-close" onclick="closeCreateModal()">&times;</button>
+      </div>
+
+      <form id="createRoomForm" onsubmit="handleCreateRoom(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>ID de Sala (slug)</label>
+            <input type="text" class="form-control" id="newRoomId" placeholder="ej. sala-devops" required>
+          </div>
+          <div class="form-group">
+            <label>Nombre Descriptivo</label>
+            <input type="text" class="form-control" id="newRoomName" placeholder="ej. Sala DevOps & Cloud" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Tipo de Fuente de Audio</label>
+          <div class="source-options">
+            <div class="source-option selected" data-kind="file" onclick="selectSourceKind('file')">📁 Archivo Demo</div>
+            <div class="source-option" data-kind="mic" onclick="selectSourceKind('mic')">🎙 Micrófono</div>
+            <div class="source-option" data-kind="stream" onclick="selectSourceKind('stream')">📡 Stream RTMP/HLS</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label id="sourceUriLabel">Ruta al archivo de audio</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" class="form-control" id="newRoomUri" value="samples/speech_sample.wav" required>
+            <button type="button" id="btnSelectDevice" class="btn btn-outline btn-sm" style="display:none;" onclick="loadMicDevicesIntoUri()">Dispositivos</button>
+          </div>
+          <small id="uriHelpText" style="display:block; margin-top: 0.3rem; color: var(--text-muted); font-size: 0.75rem;">
+            Ejemplo: samples/speech_sample.wav
+          </small>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Idioma Origen</label>
+            <select class="form-control" id="newRoomSourceLang">
+              <option value="es-419" selected>Español (Latam)</option>
+              <option value="en">Inglés</option>
+              <option value="pt">Portugués</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Idiomas de Subtitulado</label>
+            <div style="display: flex; gap: 1rem; padding-top: 0.4rem;">
+              <label><input type="checkbox" id="langEs" checked> Español</label>
+              <label><input type="checkbox" id="langEn" checked> Inglés</label>
+              <label><input type="checkbox" id="langPt" checked> Portugués</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Glosario Técnico (separado por comas)</label>
+          <input type="text" class="form-control" id="newRoomGlossary" placeholder="Kubernetes, Terraform, Docker, Nerdearla, PyTorch...">
+        </div>
+
+        <div class="form-row" style="margin-bottom: 1.5rem;">
+          <label><input type="checkbox" id="newRoomLoop" checked> Repetir archivo en bucle (loop)</label>
+          <label><input type="checkbox" id="newRoomAutoStart"> Iniciar de inmediato</label>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button type="button" class="btn btn-outline" onclick="closeCreateModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Crear Sala</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Glossary Modal -->
+  <div class="modal-overlay" id="glossaryModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Editar Glosario Técnico en Caliente</h2>
+        <button class="modal-close" onclick="closeGlossaryModal()">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label id="glossaryRoomTitle">Sala:</label>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+          Los términos aquí configurados sesgan el modelo de ASR y se protegen de traducción errónea en vivo.
+        </p>
+        <textarea id="glossaryTermsInput" class="form-control" rows="5" placeholder="Un término por línea o separados por comas..."></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button type="button" class="btn btn-outline" onclick="closeGlossaryModal()">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="saveGlossaryPatch()">Aplicar Cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Devices Modal -->
+  <div class="modal-overlay" id="devicesModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Dispositivos de Audio del Sistema</h2>
+        <button class="modal-close" onclick="closeDevicesModal()">&times;</button>
+      </div>
+
+      <div id="devicesList" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem;">
+        Cargando dispositivos...
+      </div>
+
+      <div style="display: flex; justify-content: flex-end;">
+        <button type="button" class="btn btn-outline" onclick="closeDevicesModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast">Notificación</div>
+
+  <script>
+    let selectedKind = 'file';
+    let activeEditingRoomId = null;
+    let availableDevices = [];
+
+    function getAdminToken() {
+      const input = document.getElementById('adminToken');
+      const token = input ? input.value.trim() : 'nerdearla2026';
+      localStorage.setItem('nejoyt_admin_token', token);
+      return token;
+    }
+
+    function initToken() {
+      const saved = localStorage.getItem('nejoyt_admin_token');
+      if (saved) {
+        document.getElementById('adminToken').value = saved;
+      }
+      document.getElementById('adminToken').addEventListener('change', (e) => {
+        localStorage.setItem('nejoyt_admin_token', e.target.value.trim());
+      });
+    }
+
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.style.borderColor = isError ? 'var(--danger)' : 'var(--primary)';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    async function apiCall(endpoint, method = 'GET', body = null) {
+      const token = getAdminToken();
+      const headers = {
+        'Content-Type': 'application/json',
+        'X-Admin-Token': token
+      };
+
+      try {
+        const res = await fetch(endpoint, {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : null
+        });
+
+        if (res.status === 401) {
+          showToast('Error 401: Token de administración no válido.', true);
+          return null;
+        }
+
+        const data = await res.json();
+        if (!res.ok) {
+          showToast(data.detail || 'Error en la solicitud', true);
+          return null;
+        }
+        return data;
+      } catch (err) {
+        showToast('Error de conexión con el servidor', true);
+        return null;
+      }
+    }
+
+    async function loadRooms() {
+      try {
+        const res = await fetch('/api/rooms');
+        if (!res.ok) return;
+        const data = await res.json();
+        renderRooms(data.rooms || []);
+      } catch (e) {
+        console.error('Error polling rooms:', e);
+      }
+    }
+
+    function renderRooms(rooms) {
+      const container = document.getElementById('roomsList');
+      if (!rooms.length) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 3rem; background: var(--bg-card); border-radius: 12px; border: 1px dashed var(--border-color);">
+            <h3>No hay salas registradas</h3>
+            <p style="color: var(--text-muted); margin-top: 0.5rem;">Crea una nueva sala para comenzar a subtitular.</p>
+          </div>
+        `;
+        return;
+      }
+
+      let totalAudience = 0;
+      let activeCount = 0;
+
+      container.innerHTML = rooms.map(room => {
+        totalAudience += (room.subscribers || 0);
+        if (room.is_running) activeCount++;
+
+        let badgeClass = 'badge-stopped';
+        let badgeLabel = 'STANDBY';
+
+        if (room.state === 'active') {
+          badgeClass = 'badge-active';
+          badgeLabel = 'EN VIVO';
+        } else if (room.state === 'starting') {
+          badgeClass = 'badge-starting';
+          badgeLabel = 'INICIANDO';
+        } else if (room.state === 'degraded') {
+          badgeClass = 'badge-degraded';
+          badgeLabel = 'RECONECTANDO';
+        } else if (room.state === 'error') {
+          badgeClass = 'badge-error';
+          badgeLabel = 'ERROR';
+        }
+
+        const sourceIcon = room.kind === 'mic' ? '🎙' : (room.kind === 'stream' ? '📡' : '📁');
+
+        return `
+          <div class="room-card">
+            <div class="room-info">
+              <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem;">
+                <h3>${room.name}</h3>
+                <span class="badge ${badgeClass}">${badgeLabel}</span>
+              </div>
+              <div class="room-meta">
+                <span>${sourceIcon} ${room.kind.toUpperCase()}:</span>
+                <span class="room-uri" title="${room.source_uri}">${room.source_uri}</span>
+              </div>
+            </div>
+
+            <div class="room-metrics">
+              <div>Origen: <strong>${room.source_lang}</strong></div>
+              <div>Destinos: <strong>${(room.target_langs || []).join(', ')}</strong></div>
+              <div>Glosario: <strong>${(room.custom_vocabulary || []).length} términos</strong></div>
+            </div>
+
+            <div class="room-metrics">
+              <div>Subtítulos: <strong>${room.subtitles_count || 0}</strong></div>
+              <div>Audiencia: <strong>${room.subscribers || 0} conectados</strong></div>
+              <div>Uptime: <strong>${room.uptime_seconds ? formatUptime(room.uptime_seconds) : '—'}</strong></div>
+            </div>
+
+            <div class="room-actions">
+              ${room.is_running
+                ? `<button class="btn btn-danger btn-sm" onclick="stopRoom('${room.id}')">⏹ Detener</button>`
+                : `<button class="btn btn-success btn-sm" onclick="startRoom('${room.id}')">▶ Iniciar</button>`
+              }
+              <button class="btn btn-outline btn-sm" onclick="openGlossaryModal('${room.id}', ${JSON.stringify(room.custom_vocabulary || []).replace(/"/g, '&quot;')})">📝 Glosario</button>
+              <a href="/room/${room.id}" target="_blank" class="btn btn-outline btn-sm">🔗 Audiencia</a>
+              <a href="/room/${room.id}?overlay=1" target="_blank" class="btn btn-outline btn-sm">🎥 OBS</a>
+              <a href="/api/rooms/${room.id}/export?format=srt" class="btn btn-outline btn-sm">📥 SRT</a>
+              <button class="btn btn-outline btn-sm" style="color: var(--danger); border-color: rgba(255,82,82,0.3);" onclick="deleteRoom('${room.id}')">✕</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('statActive').innerText = `${activeCount} / ${rooms.length}`;
+      document.getElementById('statAudience').innerText = totalAudience;
+    }
+
+    function formatUptime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${m}m ${s < 10 ? '0' : ''}${s}s`;
+    }
+
+    async function startRoom(id) {
+      showToast(`Iniciando sala ${id}...`);
+      const res = await apiCall(`/api/rooms/${id}/start`, 'POST');
+      if (res) {
+        showToast(`Sala '${id}' iniciada con éxito.`);
+        loadRooms();
+      }
+    }
+
+    async function stopRoom(id) {
+      showToast(`Deteniendo sala ${id}...`);
+      const res = await apiCall(`/api/rooms/${id}/stop`, 'POST');
+      if (res) {
+        showToast(`Sala '${id}' detenida.`);
+        loadRooms();
+      }
+    }
+
+    async function deleteRoom(id) {
+      if (!confirm(`¿Eliminar definitivamente la sala '${id}'?`)) return;
+      const res = await apiCall(`/api/rooms/${id}`, 'DELETE');
+      if (res) {
+        showToast(`Sala '${id}' eliminada.`);
+        loadRooms();
+      }
+    }
+
+    /* Modals */
+    function openCreateModal() {
+      document.getElementById('createModal').classList.add('open');
+    }
+
+    function closeCreateModal() {
+      document.getElementById('createModal').classList.remove('open');
+    }
+
+    function selectSourceKind(kind) {
+      selectedKind = kind;
+      document.querySelectorAll('.source-option').forEach(el => {
+        el.classList.toggle('selected', el.dataset.kind === kind);
+      });
+
+      const uriLabel = document.getElementById('sourceUriLabel');
+      const uriInput = document.getElementById('newRoomUri');
+      const uriHelp = document.getElementById('uriHelpText');
+      const btnDevice = document.getElementById('btnSelectDevice');
+
+      if (kind === 'file') {
+        uriLabel.innerText = 'Ruta al archivo de audio local';
+        uriInput.value = 'samples/speech_sample.wav';
+        uriHelp.innerText = 'Formatos soportados por FFmpeg (.wav, .mp3, .m4a, .mp4)';
+        btnDevice.style.display = 'none';
+      } else if (kind === 'mic') {
+        uriLabel.innerText = 'Dispositivo de Entrada de Micrófono';
+        uriInput.value = availableDevices.length ? availableDevices[0].id : 'Microphone';
+        uriHelp.innerText = 'Nombre DirectShow o @device_cm_... del micrófono';
+        btnDevice.style.display = 'inline-block';
+      } else if (kind === 'stream') {
+        uriLabel.innerText = 'URI RTMP o HLS entrante';
+        uriInput.value = 'rtmp://0.0.0.0:1935/live/stream1';
+        uriHelp.innerText = 'FFmpeg escuchará en RTMP o consumirá HLS (.m3u8)';
+        btnDevice.style.display = 'none';
+      }
+    }
+
+    async function handleCreateRoom(e) {
+      e.preventDefault();
+
+      const targets = [];
+      if (document.getElementById('langEs').checked) targets.push('es');
+      if (document.getElementById('langEn').checked) targets.push('en');
+      if (document.getElementById('langPt').checked) targets.push('pt');
+
+      const rawGlossary = document.getElementById('newRoomGlossary').value;
+      const custom_vocabulary = rawGlossary
+        .split(',')
+        .map(t => t.trim())
+        .filter(t => t.length > 0);
+
+      const roomData = {
+        id: document.getElementById('newRoomId').value.trim(),
+        name: document.getElementById('newRoomName').value.trim(),
+        kind: selectedKind,
+        source_uri: document.getElementById('newRoomUri').value.trim(),
+        source_lang: document.getElementById('newRoomSourceLang').value,
+        target_langs: targets,
+        custom_vocabulary: custom_vocabulary,
+        loop: document.getElementById('newRoomLoop').checked,
+        auto_start: document.getElementById('newRoomAutoStart').checked
+      };
+
+      const res = await apiCall(`/api/rooms?auto_start=${roomData.auto_start}`, 'POST', roomData);
+      if (res) {
+        showToast(`Sala '${roomData.id}' creada exitosamente.`);
+        closeCreateModal();
+        loadRooms();
+      }
+    }
+
+    /* Glossary Modal */
+    function openGlossaryModal(roomId, terms) {
+      activeEditingRoomId = roomId;
+      document.getElementById('glossaryRoomTitle').innerText = `Sala: ${roomId}`;
+      document.getElementById('glossaryTermsInput').value = terms.join(', ');
+      document.getElementById('glossaryModal').classList.add('open');
+    }
+
+    function closeGlossaryModal() {
+      document.getElementById('glossaryModal').classList.remove('open');
+      activeEditingRoomId = null;
+    }
+
+    async function saveGlossaryPatch() {
+      if (!activeEditingRoomId) return;
+      const raw = document.getElementById('glossaryTermsInput').value;
+      const terms = raw.split(/[\n,]+/).map(t => t.trim()).filter(t => t.length > 0);
+
+      const res = await apiCall(`/api/rooms/${activeEditingRoomId}`, 'PATCH', {
+        custom_vocabulary: terms
+      });
+
+      if (res) {
+        showToast('Glosario actualizado en caliente.');
+        closeGlossaryModal();
+        loadRooms();
+      }
+    }
+
+    /* Audio Devices */
+    async function fetchAudioDevicesModal() {
+      document.getElementById('devicesModal').classList.add('open');
+      const listEl = document.getElementById('devicesList');
+      listEl.innerHTML = 'Detectando dispositivos de captura con FFmpeg...';
+
+      const data = await apiCall('/api/devices/audio');
+      if (!data || !data.devices || !data.devices.length) {
+        listEl.innerHTML = '<p style="color: var(--text-muted);">No se detectaron dispositivos de audio DirectShow.</p>';
+        return;
+      }
+
+      availableDevices = data.devices;
+      listEl.innerHTML = data.devices.map(d => `
+        <div style="background: var(--bg-dark); border: 1px solid var(--border-color); padding: 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 600;">${d.name}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">${d.id}</div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="selectDevice('${d.id}')">Usar</button>
+        </div>
+      `).join('');
+    }
+
+    function selectDevice(devId) {
+      document.getElementById('newRoomUri').value = devId;
+      closeDevicesModal();
+      showToast('Dispositivo seleccionado para la sala');
+    }
+
+    function loadMicDevicesIntoUri() {
+      fetchAudioDevicesModal();
+    }
+
+    function closeDevicesModal() {
+      document.getElementById('devicesModal').classList.remove('open');
+    }
+
+    // Startup
+    initToken();
+    loadRooms();
+    setInterval(loadRooms, 2000);
+  </script>
+</body>
+</html>
