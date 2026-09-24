@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from config import SourceKind
 from audio.source import AudioSource
 from asr.rotation import SeamlessRotationASR
 
@@ -18,7 +19,7 @@ async def main():
         rotation_threshold_sec=5.0   # Conmuta tras 5 segundos
     )
     
-    audio_source = AudioSource("samples/speech_sample.wav", is_live_stream=False)
+    audio_source = AudioSource(kind=SourceKind.FILE, source_uri="samples/speech_sample.wav", loop=False)
     
     await rotation_asr.start()
     

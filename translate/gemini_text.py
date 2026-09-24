@@ -6,6 +6,7 @@ from typing import List, Optional
 from google import genai
 from google.genai import types
 from config import settings
+from translate.local_marian import translate_local_sentence
 
 logger = logging.getLogger("translate.gemini_text")
 
@@ -81,21 +82,19 @@ class GeminiTranslator:
         if cache_key in self._cache:
             return self._cache[cache_key]
 
-        # 1. Si es en -> es o es -> en, usar modelo local offline (0.6s, 100% offline, sin cuota)
+        # 1. Traducción local offline ultrarrápida (CTranslate2 / MarianMT, 50-80ms, 0 cuota)
         pair = f"{src}-{tgt}"
         if pair in ("en-es", "es-en"):
             try:
                 loop = asyncio.get_running_loop()
-
-                def _run_marian():
-                    tok, mod = _get_local_marian(pair)
-                    if tok and mod:
-                        inputs = tok(cleaned, return_tensors="pt")
-                        outputs = mod.generate(**inputs, max_length=128)
-                        return tok.decode(outputs[0], skip_special_tokens=True).strip()
-                    return None
-
-                local_res = await loop.run_in_executor(None, _run_marian)
+                local_res = await loop.run_in_executor(
+                    None,
+                    translate_local_sentence,
+                    cleaned,
+                    src,
+                    tgt,
+                    self.glossary
+                )
                 if local_res:
                     if len(self._cache) > 500:
                         self._cache.clear()
@@ -103,37 +102,45 @@ class GeminiTranslator:
                     self._history.append(cleaned)
                     return local_res
             except Exception as e:
-                logger.warning("Fallo en traducción local MarianMT (%s): %s. Intentando Gemini...", pair, e)
+                logger.warning("Fallo en traducción local (%s): %s. Intentando Gemini...", pair, e)
 
-        client = self._get_client()
+        # 2. Fallback a Google Cloud Gemini si está disponible y configurado
+        if not settings.gemini_api_key or settings.gemini_api_key.startswith("your_"):
+            logger.debug("Sin API Key de Gemini configurada. Manteniendo texto original.")
+            self._history.append(cleaned)
+            return cleaned
+
+        try:
+            client = self._get_client()
+        except Exception as e:
+            logger.warning("No se pudo inicializar cliente Gemini: %s", e)
+            self._history.append(cleaned)
+            return cleaned
+
         system_instruction = self._build_system_instruction(target_lang)
-
         prompt = f"Traduce exactamente al '{target_lang}':\n\"{cleaned}\""
 
-        models_to_try = [self.model]
-        if "flash-lite" not in self.model:
-            models_to_try.append("gemini-3.5-flash-lite")
+        models_to_try = [self.model, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-8b"]
+        # Eliminar duplicados manteniendo orden
+        seen = set()
+        unique_models = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
 
         async with self._semaphore:
-            for model_name in models_to_try:
+            for model_name in unique_models:
                 try:
-                    # Configuración optimizada según capacidades del modelo
                     cfg_kwargs = {
                         "system_instruction": system_instruction,
                         "temperature": 0.0,
                     }
-                    if "flash-lite" not in model_name:
-                        cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
 
                     call = client.aio.models.generate_content(
                         model=model_name,
                         contents=prompt,
                         config=types.GenerateContentConfig(**cfg_kwargs)
                     )
-                    response = await asyncio.wait_for(call, timeout=6.0)
+                    response = await asyncio.wait_for(call, timeout=5.0)
                     raw_text = response.text.strip() if response.text else cleaned
 
-                    # Limpiar prefijos comunes si el LLM los incluye
                     cleaned_trans = re.sub(
                         r'^(traducción|translation|traducido):\s*',
                         '',

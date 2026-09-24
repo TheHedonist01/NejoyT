@@ -21,6 +21,7 @@ dependencies = [
     "nvidia-cudnn-cu12>=9.26.0.51",
     "deep-translator>=1.11.4",
     "sentencepiece>=0.2.2",
+    "sacremoses>=0.2.0",
 ]
 
 [tool.uv]

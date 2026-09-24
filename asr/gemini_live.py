@@ -19,12 +19,12 @@ class GeminiLiveASR(ASRBackend):
     def __init__(
         self,
         model: Optional[str] = None,
-        language: Optional[str] = "es-419",
+        language: Optional[str] = "auto",
         custom_vocabulary: Optional[List[str]] = None,
         session_id: Optional[str] = None
     ):
         self.model = model or settings.gemini_live_model
-        self.language = language
+        self.language = language or "auto"
         self.custom_vocabulary = custom_vocabulary or []
         self.session_id = session_id or "session-live"
 
@@ -35,7 +35,9 @@ class GeminiLiveASR(ASRBackend):
         self._stop_requested = asyncio.Event()
 
     def _build_config(self) -> types.LiveConnectConfig:
-        lang_codes = [self.language] if self.language else []
+        # En cloud, si es auto o None, language_codes=[] activa detección automática + code-switching
+        is_auto = not self.language or self.language in ("auto", "auto-detect", "multilingual")
+        lang_codes = [] if is_auto else [self.language]
         return types.LiveConnectConfig(
             response_modalities=["TEXT"],
             input_audio_transcription=types.AudioTranscriptionConfig(
@@ -46,9 +48,16 @@ class GeminiLiveASR(ASRBackend):
         )
 
     async def start(self) -> None:
-        """Inicia el worker de conexión en segundo plano."""
+        """Inicia el worker de conexión en segundo plano verificando credenciales."""
         if self._running:
             return
+
+        if not settings.gemini_api_key or settings.gemini_api_key.startswith("your_"):
+            raise ValueError(
+                "GEMINI_API_KEY no configurada o inválida en .env. "
+                "Para operar en modo 'cloud' configure una clave válida. "
+                "Para operar sin conexión a la nube use backend: 'local'."
+            )
 
         self._running = True
         self._stop_requested.clear()
@@ -56,7 +65,7 @@ class GeminiLiveASR(ASRBackend):
             self._connection_manager(),
             name=f"gemini-live-worker-{self.session_id}"
         )
-        logger.info("[%s] GeminiLiveASR iniciado para modelo '%s'", self.session_id, self.model)
+        logger.info("[%s] GeminiLiveASR iniciado para modelo '%s' (auto-detección: %s)", self.session_id, self.model, self.language == "auto")
 
     async def _connection_manager(self) -> None:
         """Maneja el ciclo de vida de la conexión WebSocket con reintentos."""

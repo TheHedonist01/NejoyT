@@ -79,13 +79,63 @@ El modelo de streaming `gemini-3.5-transcribe-live` impone una desconexión forz
 
 ---
 
-## 4. Requisitos y Puesta en Marcha
+---
+
+## 4. Backend Dual: Local Agnóstico de Hardware y Cloud (Google API)
+
+NejoyT cuenta con una arquitectura de backend intercambiable mediante la abstracción `ASRBackend`:
+
+```
+                    ┌───────────────────────────────┐
+                    │   Orquestador (Multi-Sala)   │
+                    └──────────────┬────────────────┘
+                                   │
+                ┌──────────────────┴──────────────────┐
+                ▼                                     ▼
+     [Backend: "cloud"]                     [Backend: "local"]
+  Gemini 3.5 Transcribe Live             Faster-Whisper + Silero VAD
+  - Conexión WebSocket streaming         - Detección de hardware automática
+  - Rotación transparente cada 9 min     - Inferencia 100% offline (sin cuota)
+  - Requiere GEMINI_API_KEY              - Ingesta de chunks de 100 ms
+```
+
+### Detección Automática de Hardware (Local)
+El backend local **no asume ninguna GPU específica ni fabricante**. Al iniciar, detecta automáticamente el mejor dispositivo disponible:
+- **NVIDIA:** CUDA con precisión `float16`.
+- **AMD:** ROCm / HIP con precisión `float16`.
+- **Apple Silicon:** MPS (Metal Performance Shaders) con precisión `float16`.
+- **CPU Universal:** Fallback universal con cuantización `int8` (corre en cualquier laptop o servidor).
+
+Al bootear, el sistema loguea claramente el hardware en uso:
+```
+[INFO] Backend local corriendo en: CUDA (float16) | Modelo Whisper: 'base'
+```
+
+### Modelo Whisper Configurable
+Puedes ajustar el tamaño del modelo según los recursos disponibles de tu equipo (`tiny`, `base`, `small`, `medium`) en `rooms.yaml` o mediante la API:
+- `tiny` (~75 MB): Ultra-rápido, ideal para CPUs modestas o Raspberry Pi 5.
+- `base` (~140 MB, default): Equilibrio óptimo entre precisión y latencia (< 80 ms en GPU).
+- `small` (~460 MB): Mayor precisión para acentos complejos.
+
+---
+
+## 5. Pipeline de Traducción Simultánea y Baja Latencia
+
+### Idioma de Entrada Automático → Traducción al Idioma Elegido
+1. **Detección Automática:** Tanto en Cloud (`language_codes=[]`) como en Local (`language=None`), el sistema identifica el idioma hablado al vuelo y tolera *code-switching*.
+2. **Traducción Local Integrada (CTranslate2 / MarianMT):** Las frases finales se traducen en la máquina local en **menos de 100 ms**, garantizando subtítulos en español (o el idioma elegido) casi en tiempo real sin agotar cuotas de API.
+3. **Manejo de Hipótesis Parciales (`interim`):** Para la audiencia que escucha en español mientras el orador habla en inglés, el sistema genera hipótesis traducidas al instante para que la pantalla siempre muestre texto comprensible en español.
+4. **Protección del Glosario Técnico:** Los términos clave (*Kubernetes, Docker, FastAPI, Prometheus, Nerdearla*) se aíslan mediante expresiones regulares antes de la traducción y se restauran fielmente en la salida.
+
+---
+
+## 6. Requisitos y Puesta en Marcha
 
 ### Prerrequisitos
 - Python 3.12+
 - [uv](https://github.com/astral-sh/uv) (gestor de paquetes y entornos)
-- FFmpeg instalado en el sistema (incluido en Windows vía WinGet o en Linux vía `apt install ffmpeg`)
-- API Key de [Google AI Studio](https://aistudio.google.com/)
+- FFmpeg instalado en el sistema (detectado automáticamente en Windows / Linux / macOS)
+- Opcional: GPU NVIDIA/AMD/Apple Silicon para aceleración local, o API Key de Google AI Studio para modo Cloud.
 
 ### Instalación
 
@@ -97,15 +147,15 @@ cd nejoyt
 # 2. Instalar dependencias con uv
 uv sync
 
-# 3. Configurar variables de entorno
+# 3. Configurar variables de entorno (solo si usas el backend Cloud)
 cp .env.example .env
 ```
 
 Configura tu `.env`:
 ```env
-GEMINI_API_KEY="AIzaSy..."
+GEMINI_API_KEY="AIzaSy..."  # Opcional si operas en modo 100% local
 GEMINI_LIVE_MODEL="gemini-3.5-transcribe-live"
-GEMINI_TRANSLATE_MODEL="gemini-3.6-flash"
+GEMINI_TRANSLATE_MODEL="gemini-2.5-flash"
 ADMIN_TOKEN="nerdearla2026"
 LOG_LEVEL="INFO"
 ```
@@ -123,25 +173,25 @@ El sistema estará disponible en:
 
 ---
 
-## 5. Pruebas Rápidas con Audios Incluidos
+## 7. Pruebas Rápidas con Audios Incluidos
 
 El repositorio incluye muestras de audio en la carpeta `samples/` listas para probar de inmediato:
 
 1. Ingresa al panel de control en [http://localhost:8000/admin](http://localhost:8000/admin).
 2. Verás las salas semilla cargadas desde `rooms.yaml` en estado `STANDBY`.
-3. Haz clic en **▶ Iniciar** en la sala `Auditorio Principal`.
+3. Haz clic en **▶ Iniciar** en la sala `Auditorio Principal` (Modo Local).
 4. Abre la vista de audiencia en [http://localhost:8000/room/auditorio-principal](http://localhost:8000/room/auditorio-principal) o el Overlay OBS en [http://localhost:8000/room/auditorio-principal?overlay=1](http://localhost:8000/room/auditorio-principal?overlay=1).
-5. Observarás cómo fluyen las hipótesis parciales (`interim`) en gris claro y se consolidan en negro pleno las frases finales con su respectiva traducción automática al español, inglés o portugués.
+5. Observarás cómo fluyen los subtítulos en tiempo real con latencia sub-segundo traducidos automáticamente al español.
 6. Al finalizar, exporta el archivo de subtítulos generado en [http://localhost:8000/api/rooms/auditorio-principal/export?format=srt](http://localhost:8000/api/rooms/auditorio-principal/export?format=srt).
 
 ---
 
-## 6. Operación en Vivo: Micrófono y Streaming RTMP
+## 8. Operación en Vivo: Micrófono y Streaming RTMP
 
 ### Uso con Micrófono de la Sala
 1. En `/admin`, haz clic en **🎙 Detectar Micrófonos**. El sistema consultará los dispositivos DirectShow (Windows) o Pulse/ALSA (Linux).
 2. Haz clic en **+ Nueva Sala**, selecciona tipo **Micrófono**, y elige el dispositivo detectado.
-3. Al iniciar la sala, el audio del micrófono se transmitirá en vivo a Gemini sin almacenamiento previo en disco.
+3. Al iniciar la sala, el audio del micrófono se procesará en tiempo real en tu GPU o CPU local.
 
 ### Ingesta RTMP desde OBS / Mesa de Sonido
 Configura la sala con:
@@ -151,7 +201,7 @@ FFmpeg esperará el flujo entrante desde tu encoder o consola de audio y comenza
 
 ---
 
-## 7. Escalabilidad: de 2 a N Salas
+## 9. Escalabilidad: de 2 a N Salas
 
 NejoyT utiliza un diseño 100% asíncrono no bloqueante (`asyncio`), donde las operaciones de red (WebSockets hacia Gemini y hacia clientes) son I/O *bound*.
 
@@ -160,6 +210,6 @@ NejoyT utiliza un diseño 100% asíncrono no bloqueante (`asyncio`), donde las o
 
 ---
 
-## 8. Licencia
+## 10. Licencia
 
 Distribuido bajo licencia **Apache 2.0**. Consulta el archivo [LICENSE](LICENSE) para más detalles.

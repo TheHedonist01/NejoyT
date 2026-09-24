@@ -396,10 +396,13 @@
           }
 
           if (data.event_type === 'interim') {
-            standbyMsg.style.display = 'none';
-            interimEl.textContent = data.text;
-            interimEl.style.display = 'block';
-            scrollToBottom();
+            const isInterimMatch = !data.language || data.language === selectedLang || data.language.startsWith(selectedLang);
+            if (isInterimMatch) {
+              standbyMsg.style.display = 'none';
+              interimEl.textContent = data.text;
+              interimEl.style.display = 'block';
+              scrollToBottom();
+            }
           } 
           else if (data.event_type === 'final' || data.event_type === 'translation') {
             standbyMsg.style.display = 'none';

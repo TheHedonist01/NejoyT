@@ -33,7 +33,8 @@ class EventBus:
     async def subscribe(self, room_id: str, lang: str = "es") -> asyncio.Queue[SubtitleEvent]:
         """Crea una cola de eventos para un nuevo suscriptor en una sala con idioma preferido."""
         queue: asyncio.Queue[SubtitleEvent] = asyncio.Queue(maxsize=self._max_queue_size)
-        clean_lang = (lang or "es").strip().lower()[:2]
+        raw_lang = (lang or "es").strip().lower()
+        clean_lang = "all" if raw_lang == "all" else raw_lang[:2]
         async with self._lock:
             if room_id not in self._subscribers:
                 self._subscribers[room_id] = set()
@@ -59,7 +60,7 @@ class EventBus:
         """
         Publica un evento a los suscriptores correspondientes de la sala.
         Filtra por idioma para que cada cliente reciba únicamente subtítulos en su idioma preferido,
-        salvo eventos de control (status) o hipótesis en vivo (interim).
+        salvo eventos de control (status) o suscriptores omniscientes ('all').
         """
         subscribers = self._subscribers.get(room_id)
         if not subscribers:
@@ -68,12 +69,13 @@ class EventBus:
         event_lang = (event.language or "es").strip().lower()[:2]
 
         for queue, sub_lang in list(subscribers):
-            # Enviar si es control, interim, o si el idioma del evento coincide con el del cliente
-            should_send = (
-                event.event_type in ("status", "interim")
-                or event_lang == sub_lang
-                or sub_lang == "all"
-            )
+            if event.event_type == "status" or sub_lang == "all":
+                should_send = True
+            elif event_lang == sub_lang:
+                should_send = True
+            else:
+                should_send = False
+
             if not should_send:
                 continue
 

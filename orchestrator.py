@@ -105,10 +105,11 @@ class SessionWorker:
             )
 
             if self.room.backend == ASRBackendKind.LOCAL:
-                logger.info("[%s] Usando backend Local ASR en GPU...", self.room.id)
+                model_sz = getattr(self.room, "whisper_model_size", "base") or "base"
+                logger.info("[%s] Usando backend Local ASR (modelo: %s, detección de hardware automática)...", self.room.id, model_sz)
                 self.asr = LocalASR(
-                    model_size="base",
-                    device="cuda",
+                    model_size=model_sz,
+                    device=None,
                     language=self.room.source_lang,
                     custom_vocabulary=self.room.custom_vocabulary
                 )
@@ -167,6 +168,10 @@ class SessionWorker:
                     break
 
                 speaker_lang = (asr_event.language or self.room.source_lang or "es").strip().lower()[:2]
+                if speaker_lang in ("au", "mu"):
+                    speaker_lang = "es"
+
+                primary_tgt = (self.room.target_lang or "es").strip().lower()[:2]
 
                 # 1. Evento interim (hipótesis parcial en idioma original al instante)
                 if not asr_event.is_final:
@@ -178,6 +183,24 @@ class SessionWorker:
                         is_final=False
                     )
                     event_bus.publish(self.room.id, event)
+
+                    # Si el orador habla inglés y la audiencia principal escucha español (o viceversa),
+                    # generar traducción de interim rápida (~60ms) para que el espectador vea español en vivo
+                    if speaker_lang != primary_tgt and len(asr_event.text.split()) >= 2:
+                        translated_interim = await self.translator.translate(
+                            text=asr_event.text,
+                            target_lang=primary_tgt,
+                            source_lang=speaker_lang
+                        )
+                        if translated_interim and translated_interim != asr_event.text:
+                            trans_interim_event = SubtitleEvent(
+                                room_id=self.room.id,
+                                event_type="interim",
+                                text=translated_interim,
+                                language=primary_tgt,
+                                is_final=False
+                            )
+                            event_bus.publish(self.room.id, trans_interim_event)
                     continue
 
                 # 2. Evento final (frase cerrada en idioma original hablado)
@@ -204,21 +227,16 @@ class SessionWorker:
                         translations[tgt] = asr_event.text
                         continue
 
-                    # A. Si el objetivo es inglés y tenemos traducción directa en GPU (0.3s), usarla sin gastar cuota
-                    if tgt == "en" and getattr(asr_event, "translation", None) and asr_event.translation_lang == "en":
-                        translated_text = asr_event.translation
-                    else:
-                        # B. Si ningún cliente conectado está escuchando este idioma y NO es el idioma principal configurado, omitir
-                        is_primary = (tgt == (self.room.target_lang or "").strip().lower()[:2])
-                        if not is_primary and active_langs and tgt not in active_langs:
-                            continue
+                    # Si ningún cliente conectado está escuchando este idioma y NO es el idioma principal configurado, omitir
+                    is_primary = (tgt == primary_tgt)
+                    if not is_primary and active_langs and tgt not in active_langs:
+                        continue
 
-                        translated_text = await self.translator.translate(
-                            text=asr_event.text,
-                            target_lang=tgt,
-                            source_lang=speaker_lang
-                        )
-
+                    translated_text = await self.translator.translate(
+                        text=asr_event.text,
+                        target_lang=tgt,
+                        source_lang=speaker_lang
+                    )
                     translations[tgt] = translated_text
 
                     # Emitir evento de traducción para clientes que escuchan en este idioma

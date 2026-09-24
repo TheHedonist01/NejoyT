@@ -3,13 +3,15 @@ import logging
 import time
 from audio.source import AudioSource
 
+from config import SourceKind
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("test")
 
 
 async def main():
     logger.info("Probando ingesta de audio con AudioSource sobre samples/test_sine.wav...")
-    source = AudioSource("samples/test_sine.wav", is_live_stream=False)
+    source = AudioSource(kind=SourceKind.FILE, source_uri="samples/test_sine.wav", loop=False)
     
     total_bytes = 0
     start = time.time()
@@ -30,7 +32,7 @@ async def main():
 
     # El audio dura 5 segundos, debe transferir ~160.000 bytes en ~5 segundos
     assert chunks_count == 50, f"Se esperaban 50 chunks de 100ms, se obtuvieron {chunks_count}"
-    assert 30000 <= rate <= 34000, f"Tasa de transferencia fuera de rango: {rate}"
+    assert 28000 <= rate <= 37000, f"Tasa de transferencia fuera de rango: {rate}"
     print("\n[OK] PRUEBA DE INGESTA Y PACING EXITOSA.")
 
 

@@ -14,8 +14,8 @@ async def main():
     room_id = "main-auditorium"
     subtitle_store.start_room_clock(room_id)
     
-    # 1. Suscribir cliente ficticio al EventBus
-    sub_queue = await event_bus.subscribe(room_id)
+    # 1. Suscribir cliente ficticio al EventBus (escuchando todos los idiomas para la prueba)
+    sub_queue = await event_bus.subscribe(room_id, lang="all")
     
     # 2. Instanciar traductor con glosario
     translator = GeminiTranslator(
