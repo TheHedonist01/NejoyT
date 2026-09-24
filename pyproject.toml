@@ -19,6 +19,8 @@ dependencies = [
     "accelerate>=1.15.0",
     "nvidia-cublas-cu12>=12.9.2.10",
     "nvidia-cudnn-cu12>=9.26.0.51",
+    "deep-translator>=1.11.4",
+    "sentencepiece>=0.2.2",
 ]
 
 [tool.uv]

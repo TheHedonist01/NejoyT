@@ -81,6 +81,30 @@ class GeminiTranslator:
         if cache_key in self._cache:
             return self._cache[cache_key]
 
+        # 1. Si es en -> es o es -> en, usar modelo local offline (0.6s, 100% offline, sin cuota)
+        pair = f"{src}-{tgt}"
+        if pair in ("en-es", "es-en"):
+            try:
+                loop = asyncio.get_running_loop()
+
+                def _run_marian():
+                    tok, mod = _get_local_marian(pair)
+                    if tok and mod:
+                        inputs = tok(cleaned, return_tensors="pt")
+                        outputs = mod.generate(**inputs, max_length=128)
+                        return tok.decode(outputs[0], skip_special_tokens=True).strip()
+                    return None
+
+                local_res = await loop.run_in_executor(None, _run_marian)
+                if local_res:
+                    if len(self._cache) > 500:
+                        self._cache.clear()
+                    self._cache[cache_key] = local_res
+                    self._history.append(cleaned)
+                    return local_res
+            except Exception as e:
+                logger.warning("Fallo en traducción local MarianMT (%s): %s. Intentando Gemini...", pair, e)
+
         client = self._get_client()
         system_instruction = self._build_system_instruction(target_lang)
 

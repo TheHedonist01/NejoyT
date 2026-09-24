@@ -174,14 +174,17 @@ async def export_subtitles(room_id: str, format: str = "srt", lang: str = "es"):
 
 
 @app.websocket("/ws/{room_id}")
-async def websocket_endpoint(websocket: WebSocket, room_id: str, lang: Optional[str] = "es"):
+async def websocket_endpoint(websocket: WebSocket, room_id: str, lang: Optional[str] = None):
     """
     Canal WebSocket en tiempo real para transmisión de subtítulos (interim, final, status).
     """
     await websocket.accept()
-    logger.info("Cliente WebSocket conectado a sala '%s' (idioma preferido: %s)", room_id, lang)
+    worker = orchestrator.get_worker(room_id)
+    default_lang = worker.room.target_lang if worker else "es"
+    chosen_lang = (lang or default_lang).strip().lower()[:2]
 
-    queue = await event_bus.subscribe(room_id, lang=lang or "es")
+    logger.info("Cliente WebSocket conectado a sala '%s' (idioma preferido: %s)", room_id, chosen_lang)
+    queue = await event_bus.subscribe(room_id, lang=chosen_lang)
 
     try:
         while True:

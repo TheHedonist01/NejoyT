@@ -31,7 +31,8 @@ class RoomConfig(BaseModel):
     kind: SourceKind = Field(SourceKind.FILE, description="Tipo de fuente: 'file', 'mic' o 'stream'")
     backend: ASRBackendKind = Field(ASRBackendKind.LOCAL, description="Backend ASR: 'local' (GPU RTX / Whisper / Gemma) o 'cloud' (Gemini Live)")
     source_uri: str = Field(..., description="Ruta al archivo, URI RTMP/HLS, o nombre del dispositivo de audio")
-    source_lang: str = Field("es-419", description="Idioma de origen (ej. 'es-419', 'en', o vacía para auto)")
+    source_lang: str = Field("es", description="Idioma base hablado en el audio ('es', 'en', 'pt', o 'auto')")
+    target_lang: str = Field("en", description="Idioma de salida principal para los subtítulos ('es', 'en', 'pt')")
     target_langs: List[str] = Field(default_factory=lambda: ["es", "en"], description="Idiomas de subtitulado disponibles")
     custom_vocabulary: List[str] = Field(default_factory=list, description="Términos técnicos para sesgar ASR")
     loop: bool = Field(False, description="Si es True y la fuente es un archivo, loopea continuamente")
@@ -41,6 +42,8 @@ class RoomConfig(BaseModel):
 class RoomPatch(BaseModel):
     name: Optional[str] = None
     backend: Optional[ASRBackendKind] = None
+    source_lang: Optional[str] = None
+    target_lang: Optional[str] = None
     target_langs: Optional[List[str]] = None
     custom_vocabulary: Optional[List[str]] = None
 

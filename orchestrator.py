@@ -25,6 +25,7 @@ class RoomStatus(BaseModel):
     backend: ASRBackendKind
     source_uri: str
     source_lang: str
+    target_lang: str = "es"
     target_langs: List[str]
     custom_vocabulary: List[str]
     state: RoomState
@@ -193,17 +194,23 @@ class SessionWorker:
                 translations: Dict[str, str] = {speaker_lang: asr_event.text}
                 active_langs = event_bus.active_languages(self.room.id)
 
-                for raw_target in self.room.target_langs:
+                candidate_targets = list(self.room.target_langs)
+                if self.room.target_lang and self.room.target_lang not in candidate_targets:
+                    candidate_targets.append(self.room.target_lang)
+
+                for raw_target in candidate_targets:
                     tgt = raw_target.strip().lower()[:2]
                     if tgt == speaker_lang:
+                        translations[tgt] = asr_event.text
                         continue
 
                     # A. Si el objetivo es inglés y tenemos traducción directa en GPU (0.3s), usarla sin gastar cuota
                     if tgt == "en" and getattr(asr_event, "translation", None) and asr_event.translation_lang == "en":
                         translated_text = asr_event.translation
                     else:
-                        # B. Si ningún cliente conectado está escuchando este idioma, omitir llamada remota
-                        if active_langs and tgt not in active_langs:
+                        # B. Si ningún cliente conectado está escuchando este idioma y NO es el idioma principal configurado, omitir
+                        is_primary = (tgt == (self.room.target_lang or "").strip().lower()[:2])
+                        if not is_primary and active_langs and tgt not in active_langs:
                             continue
 
                         translated_text = await self.translator.translate(
@@ -272,6 +279,14 @@ class SessionWorker:
             self.room.name = patch.name
         if patch.backend is not None:
             self.room.backend = patch.backend
+        if patch.source_lang is not None:
+            self.room.source_lang = patch.source_lang
+            if self.asr and hasattr(self.asr, "language"):
+                self.asr.language = patch.source_lang
+        if patch.target_lang is not None:
+            self.room.target_lang = patch.target_lang
+            if patch.target_lang not in self.room.target_langs:
+                self.room.target_langs.append(patch.target_lang)
         if patch.target_langs is not None:
             self.room.target_langs = patch.target_langs
         if patch.custom_vocabulary is not None:
@@ -291,6 +306,7 @@ class SessionWorker:
             backend=self.room.backend,
             source_uri=self.room.source_uri,
             source_lang=self.room.source_lang,
+            target_lang=self.room.target_lang,
             target_langs=self.room.target_langs,
             custom_vocabulary=self.room.custom_vocabulary,
             state=self.state,

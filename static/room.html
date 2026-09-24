@@ -360,9 +360,11 @@
 
     // WebSocket conexión
     let ws = null;
-    let selectedLang = langSelect.value;
+    let userManuallySelectedLang = !!urlParams.get('lang');
+    let selectedLang = urlParams.get('lang') || 'es';
 
     langSelect.addEventListener('change', () => {
+      userManuallySelectedLang = true;
       selectedLang = langSelect.value;
       connectWebSocket();
     });
@@ -451,13 +453,31 @@
           document.title = `${current.name} — Subtítulos Nerdearla`;
           updateRoomStateUI(current.state);
 
+          const defaultTarget = current.target_lang || 'es';
+
+          // Si el usuario no eligió un idioma manualmente en la UI ni por URL, adoptar el idioma de subtítulo configurado en la sala
+          let needsWsReconnect = false;
+          if (!userManuallySelectedLang && current.target_lang && selectedLang !== current.target_lang) {
+            selectedLang = current.target_lang;
+            needsWsReconnect = true;
+          }
+
           // Ajustar idiomas disponibles en el selector
-          if (current.target_langs && current.target_langs.length > 0) {
-            const currentSelected = langSelect.value;
-            const langNames = { 'es': 'Español', 'en': 'English', 'pt': 'Português' };
-            langSelect.innerHTML = current.target_langs.map(l => `
-              <option value="${l}" ${l === currentSelected ? 'selected' : ''}>${langNames[l] || l.toUpperCase()}</option>
-            `).join('');
+          const availableLangs = (current.target_langs && current.target_langs.length > 0)
+            ? [...current.target_langs]
+            : [defaultTarget];
+          if (!availableLangs.includes(defaultTarget)) {
+            availableLangs.unshift(defaultTarget);
+          }
+
+          const langNames = { 'es': 'Español', 'en': 'English', 'pt': 'Português' };
+          langSelect.innerHTML = availableLangs.map(l => `
+            <option value="${l}" ${l === selectedLang ? 'selected' : ''}>${langNames[l] || l.toUpperCase()}</option>
+          `).join('');
+          langSelect.value = selectedLang;
+
+          if (needsWsReconnect && ws && ws.readyState === WebSocket.OPEN) {
+            connectWebSocket();
           }
         }
       } catch (err) {

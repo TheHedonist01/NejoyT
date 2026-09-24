@@ -273,14 +273,62 @@
       border-radius: 12px;
       padding: 1.5rem;
       display: grid;
-      grid-template-columns: 2.5fr 1.5fr 1.5fr 2fr;
+      grid-template-columns: 2.2fr 2.4fr 1.3fr 2.1fr;
       align-items: center;
-      gap: 1.5rem;
+      gap: 1.25rem;
       transition: border-color 0.2s;
     }
 
     .room-card:hover {
       border-color: #34425d;
+    }
+
+    .room-lang-pipeline {
+      background: rgba(10, 13, 20, 0.75);
+      border: 1px solid rgba(35, 44, 63, 0.9);
+      border-radius: 10px;
+      padding: 0.65rem 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .lang-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .lang-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      white-space: nowrap;
+    }
+
+    .lang-select-sm {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      border-radius: 6px;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.8rem;
+      font-family: var(--font-sans);
+      outline: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 140px;
+    }
+
+    .lang-select-sm:hover, .lang-select-sm:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 8px rgba(0, 210, 255, 0.25);
     }
 
     .room-info h3 {
@@ -666,19 +714,41 @@
           </small>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>Idioma Origen</label>
-            <select class="form-control" id="newRoomSourceLang">
-              <option value="auto" selected>✨ Auto-detectar (Español / Inglés / Multilingüe)</option>
-              <option value="es-419">Español (Latam)</option>
-              <option value="en">Inglés</option>
-              <option value="pt">Portugués</option>
-            </select>
+        <div style="background: rgba(0, 210, 255, 0.04); border: 1px solid rgba(0, 210, 255, 0.2); border-radius: 12px; padding: 1.1rem; margin-bottom: 1.25rem;">
+          <div style="font-size: 0.82rem; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 0.05em; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.4rem;">
+            <span>🌐 Configuración de Idiomas y Traducción Simultánea</span>
           </div>
-          <div class="form-group">
-            <label>Idiomas de Subtitulado</label>
-            <div style="display: flex; gap: 1rem; padding-top: 0.4rem;">
+
+          <div class="form-row" style="margin-bottom: 0.85rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-weight: 600; color: #fff;">🎙 Idioma Base (Audio Hablado en Vivo)</label>
+              <select class="form-control" id="newRoomSourceLang" style="border-color: rgba(0, 210, 255, 0.4);">
+                <option value="es" selected>🇪🇸 Español (Hispanoamérica / España)</option>
+                <option value="en">🇺🇸 Inglés (English)</option>
+                <option value="pt">🇧🇷 Portugués (Português)</option>
+                <option value="auto">✨ Auto-detectar automáticamente</option>
+              </select>
+              <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 0.35rem;">
+                Idioma de la voz del orador al hablar por el micrófono o fuente.
+              </small>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-weight: 600; color: #fff;">💬 Idioma de Subtítulos (Salida en Pantalla)</label>
+              <select class="form-control" id="newRoomTargetLang" style="border-color: rgba(0, 230, 118, 0.4);">
+                <option value="es">🇪🇸 Español (Subtítulos en Español)</option>
+                <option value="en" selected>🇺🇸 Inglés (Subtitles in English)</option>
+                <option value="pt">🇧🇷 Portugués (Legendas em Português)</option>
+              </select>
+              <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 0.35rem;">
+                Idioma en el que se proyectarán los subtítulos traducidos automáticamente.
+              </small>
+            </div>
+          </div>
+
+          <div style="margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px dashed var(--border-color); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Canales adicionales disponibles para audiencia:</span>
+            <div style="display: flex; gap: 1rem; font-size: 0.85rem;">
               <label><input type="checkbox" id="langEs" checked> Español</label>
               <label><input type="checkbox" id="langEn" checked> Inglés</label>
               <label><input type="checkbox" id="langPt" checked> Portugués</label>
@@ -815,6 +885,8 @@
       }
     }
 
+    let lastRoomsHash = '';
+
     async function loadRooms() {
       try {
         const res = await fetch('/api/rooms');
@@ -827,6 +899,14 @@
     }
 
     function renderRooms(rooms) {
+      // Evitar interrumpir al usuario si tiene un selector de idioma desplegado
+      if (document.activeElement && (document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'INPUT')) {
+        return;
+      }
+      const hash = JSON.stringify(rooms);
+      if (hash === lastRoomsHash) return;
+      lastRoomsHash = hash;
+
       const container = document.getElementById('roomsList');
       if (!rooms.length) {
         container.innerHTML = `
@@ -881,10 +961,28 @@
               </div>
             </div>
 
-            <div class="room-metrics">
-              <div>Origen: <strong>${room.source_lang}</strong></div>
-              <div>Destinos: <strong>${(room.target_langs || []).join(', ')}</strong></div>
-              <div>Glosario: <strong>${(room.custom_vocabulary || []).length} términos</strong></div>
+            <div class="room-lang-pipeline">
+              <div class="lang-row">
+                <span class="lang-label">🎙 Audio Base:</span>
+                <select class="lang-select-sm" onchange="quickUpdateSourceLang('${room.id}', this.value)" title="Idioma hablado por el orador en vivo">
+                  <option value="es" ${room.source_lang === 'es' ? 'selected' : ''}>🇪🇸 Español</option>
+                  <option value="en" ${room.source_lang === 'en' ? 'selected' : ''}>🇺🇸 Inglés</option>
+                  <option value="pt" ${room.source_lang === 'pt' ? 'selected' : ''}>🇧🇷 Portugués</option>
+                  <option value="auto" ${room.source_lang === 'auto' ? 'selected' : ''}>✨ Auto</option>
+                </select>
+              </div>
+              <div class="lang-row">
+                <span class="lang-label">💬 Subtítulos:</span>
+                <select class="lang-select-sm" onchange="quickUpdateTargetLang('${room.id}', this.value)" title="Idioma de subtítulo en pantalla">
+                  <option value="es" ${room.target_lang === 'es' ? 'selected' : ''}>🇪🇸 Español</option>
+                  <option value="en" ${room.target_lang === 'en' ? 'selected' : ''}>🇺🇸 Inglés</option>
+                  <option value="pt" ${room.target_lang === 'pt' ? 'selected' : ''}>🇧🇷 Portugués</option>
+                </select>
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; justify-content: space-between; margin-top: 0.15rem;">
+                <span>Idiomas: ${(room.target_langs || []).join(', ').toUpperCase()}</span>
+                <span>${(room.custom_vocabulary || []).length} glosario</span>
+              </div>
             </div>
 
             <div class="room-metrics">
@@ -983,13 +1081,40 @@
       }
     }
 
+    async function quickUpdateSourceLang(roomId, newLang) {
+      showToast(`Actualizando audio base de sala a: ${newLang.toUpperCase()}...`);
+      const res = await apiCall(`/api/rooms/${roomId}`, 'PATCH', { source_lang: newLang });
+      if (res) {
+        showToast(`🎙 Audio base configurado: ${newLang.toUpperCase()}`);
+        lastRoomsHash = '';
+        loadRooms();
+      }
+    }
+
+    async function quickUpdateTargetLang(roomId, newLang) {
+      showToast(`Actualizando subtítulos de salida a: ${newLang.toUpperCase()}...`);
+      const res = await apiCall(`/api/rooms/${roomId}`, 'PATCH', { target_lang: newLang });
+      if (res) {
+        showToast(`💬 Subtítulos de salida configurados: ${newLang.toUpperCase()}`);
+        lastRoomsHash = '';
+        loadRooms();
+      }
+    }
+
     async function handleCreateRoom(e) {
       e.preventDefault();
+
+      const sourceLang = document.getElementById('newRoomSourceLang').value;
+      const targetLang = document.getElementById('newRoomTargetLang').value;
 
       const targets = [];
       if (document.getElementById('langEs').checked) targets.push('es');
       if (document.getElementById('langEn').checked) targets.push('en');
       if (document.getElementById('langPt').checked) targets.push('pt');
+
+      if (!targets.includes(targetLang)) {
+        targets.unshift(targetLang);
+      }
 
       const rawGlossary = document.getElementById('newRoomGlossary').value;
       const custom_vocabulary = rawGlossary
@@ -1003,7 +1128,8 @@
         kind: selectedKind,
         backend: selectedBackend,
         source_uri: document.getElementById('newRoomUri').value.trim(),
-        source_lang: document.getElementById('newRoomSourceLang').value,
+        source_lang: sourceLang,
+        target_lang: targetLang,
         target_langs: targets,
         custom_vocabulary: custom_vocabulary,
         loop: document.getElementById('newRoomLoop').checked,
@@ -1013,6 +1139,7 @@
       const res = await apiCall(`/api/rooms?auto_start=${roomData.auto_start}`, 'POST', roomData);
       if (res) {
         showToast(`Sala '${roomData.id}' creada exitosamente.`);
+        lastRoomsHash = '';
         closeCreateModal();
         loadRooms();
       }
