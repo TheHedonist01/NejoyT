@@ -350,7 +350,8 @@ class Orchestrator:
 
         worker = SessionWorker(room_config)
         self._workers[room_config.id] = worker
-        logger.info("Nueva sala creada en caliente: %s ('%s', backend=%s)", room_config.id, room_config.name, room_config.backend.value)
+        self._save_rooms()
+        logger.info("Nueva sala creada: %s ('%s', backend=%s)", room_config.id, room_config.name, room_config.backend.value)
 
         if start or room_config.auto_start:
             await worker.start()
@@ -363,6 +364,7 @@ class Orchestrator:
             return False
         await worker.stop()
         del self._workers[room_id]
+        self._save_rooms()
         logger.info("Sala eliminada: %s", room_id)
         return True
 
@@ -371,7 +373,17 @@ class Orchestrator:
         if not worker:
             return False
         worker.patch(patch)
+        self._save_rooms()
         return True
+
+    def _save_rooms(self, config_path: str = "rooms.yaml") -> None:
+        """Persiste las salas actuales configuradas por el usuario en rooms.yaml."""
+        try:
+            data = {"rooms": [w.room.model_dump(mode="json") for w in self._workers.values()]}
+            with open(config_path, "w", encoding="utf-8") as f:
+                yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
+        except Exception as e:
+            logger.warning("No se pudo guardar la configuración de salas en %s: %s", config_path, e)
 
     def list_rooms(self) -> List[RoomStatus]:
         return [w.get_status() for w in self._workers.values()]
@@ -379,3 +391,4 @@ class Orchestrator:
 
 # Instancia singleton del orquestador
 orchestrator = Orchestrator()
+
