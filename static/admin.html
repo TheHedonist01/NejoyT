@@ -1059,21 +1059,24 @@
       }
 
       availableDevices = data.devices;
-      listEl.innerHTML = data.devices.map(d => `
+      listEl.innerHTML = data.devices.map((d, idx) => `
         <div style="background: var(--bg-dark); border: 1px solid var(--border-color); padding: 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
           <div>
             <div style="font-weight: 600;">${d.name}</div>
             <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">${d.id}</div>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="selectDevice('${d.id}')">Usar</button>
+          <button class="btn btn-outline btn-sm" onclick="selectDeviceByIndex(${idx})">Usar</button>
         </div>
       `).join('');
     }
 
-    function selectDevice(devId) {
-      document.getElementById('newRoomUri').value = devId;
-      closeDevicesModal();
-      showToast('Dispositivo seleccionado para la sala');
+    function selectDeviceByIndex(index) {
+      if (availableDevices && availableDevices[index]) {
+        const dev = availableDevices[index];
+        document.getElementById('newRoomUri').value = dev.id;
+        closeDevicesModal();
+        showToast('Dispositivo seleccionado: ' + dev.name);
+      }
     }
 
     function loadMicDevicesIntoUri() {

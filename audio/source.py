@@ -4,6 +4,7 @@ import os
 import platform
 import re
 import shutil
+import subprocess
 from typing import AsyncGenerator, Callable, Dict, List, Optional
 from config import SourceKind
 
@@ -32,7 +33,7 @@ def resolve_ffmpeg_bin() -> str:
 def list_audio_devices() -> List[Dict[str, str]]:
     """
     Detecta y lista los dispositivos de entrada de audio disponibles en el sistema operativo.
-    En Windows usa DirectShow; en Linux/Mac devuelve interfaces estándar.
+    En Windows usa DirectShow con nombres limpios y amigables; en Linux/Mac devuelve interfaces estándar.
     """
     devices: List[Dict[str, str]] = []
     system = platform.system()
@@ -45,7 +46,6 @@ def list_audio_devices() -> List[Dict[str, str]]:
                 return devices
 
             # Ejecutar ffmpeg para listar dispositivos dshow
-            import subprocess
             proc = subprocess.run(
                 [ffmpeg_bin, "-list_devices", "true", "-f", "dshow", "-i", "dummy"],
                 capture_output=True,
@@ -60,15 +60,16 @@ def list_audio_devices() -> List[Dict[str, str]]:
                     match_name = re.search(r'\"([^\"]+)\"\s+\(audio\)', line)
                     if match_name:
                         name = match_name.group(1)
-                        dev_id = name
-                        # Si la siguiente línea contiene el Alternative name (@device_cm_...), usarlo como id seguro
+                        alt_id = ""
+                        # Si la siguiente línea contiene el Alternative name, capturarlo
                         if i + 1 < len(lines) and "Alternative name" in lines[i + 1]:
                             match_alt = re.search(r'Alternative name\s+\"([^\"]+)\"', lines[i + 1])
                             if match_alt:
-                                dev_id = match_alt.group(1)
+                                alt_id = match_alt.group(1)
                         devices.append({
-                            "id": dev_id,
+                            "id": name,
                             "name": name,
+                            "alt_id": alt_id,
                             "kind": "dshow"
                         })
         except Exception as e:
@@ -90,29 +91,29 @@ class AudioSource:
     """
 
     SAMPLE_RATE = 16000
-    BYTES_PER_SAMPLE = 2  # 16-bit
     CHANNELS = 1
-    BYTES_PER_SECOND = SAMPLE_RATE * BYTES_PER_SAMPLE * CHANNELS  # 32.000 B/s
-    CHUNK_DURATION_SEC = 0.1  # 100 ms
-    CHUNK_SIZE_BYTES = int(SAMPLE_RATE * CHUNK_DURATION_SEC * BYTES_PER_SAMPLE)  # 3.200 B
-    MAX_QUEUE_CHUNKS = 50  # ~5 segundos de buffer máximo
+    BYTES_PER_SAMPLE = 2  # s16le = 16 bits = 2 bytes
+    CHUNK_DURATION_MS = 100
+    # 16000 * 2 * 0.1 = 3200 bytes por chunk de 100ms
+    CHUNK_SIZE_BYTES = int(SAMPLE_RATE * CHANNELS * BYTES_PER_SAMPLE * (CHUNK_DURATION_MS / 1000.0))
+    MAX_QUEUE_CHUNKS = 50  # ~5 segundos de buffer en memoria para amortiguar jitter
 
     def __init__(
         self,
+        kind: SourceKind,
         source_uri: str,
-        kind: SourceKind = SourceKind.FILE,
         loop: bool = False,
         on_degraded: Optional[Callable[[], None]] = None,
         on_recovered: Optional[Callable[[], None]] = None,
     ):
-        self.source_uri = source_uri
         self.kind = kind
+        self.source_uri = source_uri
         self.loop = loop
         self.on_degraded = on_degraded
         self.on_recovered = on_recovered
 
         self._queue: asyncio.Queue[Optional[bytes]] = asyncio.Queue(maxsize=self.MAX_QUEUE_CHUNKS)
-        self._process: Optional[asyncio.subprocess.Process] = None
+        self._process: Optional[subprocess.Popen] = None
         self._reader_task: Optional[asyncio.Task] = None
         self._stop_event = asyncio.Event()
 
@@ -130,8 +131,11 @@ class AudioSource:
         elif self.kind == SourceKind.MIC:
             system = platform.system()
             if system == "Windows":
-                # Si el URI ya viene con @device_... o audio=, formatear adecuadamente
-                input_dev = self.source_uri if self.source_uri.startswith("audio=") else f"audio={self.source_uri}"
+                uri = self.source_uri
+                # Auto-sanear si se perdió la barra invertida en GUIDs @device_cm_...
+                if "@device_" in uri and "}wave_" in uri and r"}\wave_" not in uri:
+                    uri = uri.replace("}wave_", r"}\wave_")
+                input_dev = uri if uri.startswith("audio=") else f"audio={uri}"
                 cmd.extend(["-f", "dshow", "-i", input_dev])
             elif system == "Darwin":
                 cmd.extend(["-f", "avfoundation", "-i", self.source_uri or ":0"])
@@ -155,26 +159,41 @@ class AudioSource:
         ])
         return cmd
 
+    @staticmethod
+    def _read_exact(stream, n: int) -> bytes:
+        """Lee exactamente n bytes del stream síncrono."""
+        buf = bytearray()
+        while len(buf) < n:
+            part = stream.read(n - len(buf))
+            if not part:
+                break
+            buf.extend(part)
+        return bytes(buf)
+
     async def _run_supervisor(self) -> None:
         """
         Ciclo de supervisión y lectura de chunks PCM con reconexión automática
         para micrófonos y streams en vivo.
+        Usa subprocess.Popen con lectura en hilo executor para total compatibilidad
+        con Windows SelectorEventLoop (habitual con uvicorn --reload).
         """
         backoff = 1.0
         max_backoff = 8.0
+        loop = asyncio.get_running_loop()
 
         while not self._stop_event.is_set():
             cmd = self._build_ffmpeg_cmd()
             logger.info("Iniciando subproceso FFmpeg [%s]: %s", self.kind.value, " ".join(cmd))
 
             try:
-                self._process = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
+                self._process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    bufsize=self.CHUNK_SIZE_BYTES * 4
                 )
             except Exception as e:
-                logger.error("No se pudo iniciar subproceso FFmpeg: %s", e)
+                logger.error("No se pudo iniciar subproceso FFmpeg (%s): %s", type(e).__name__, e)
                 if self.kind == SourceKind.FILE or self._stop_event.is_set():
                     break
                 if self.on_degraded:
@@ -188,14 +207,16 @@ class AudioSource:
 
             try:
                 while not self._stop_event.is_set():
-                    try:
-                        chunk = await self._process.stdout.readexactly(self.CHUNK_SIZE_BYTES)
-                    except asyncio.IncompleteReadError as e:
-                        if e.partial:
-                            await self._enqueue_chunk(e.partial)
-                        break
+                    chunk = await loop.run_in_executor(
+                        None,
+                        self._read_exact,
+                        self._process.stdout,
+                        self.CHUNK_SIZE_BYTES
+                    )
 
-                    if not chunk:
+                    if not chunk or len(chunk) < self.CHUNK_SIZE_BYTES:
+                        if chunk:
+                            await self._enqueue_chunk(chunk)
                         break
 
                     consecutive_reads += 1
@@ -210,13 +231,14 @@ class AudioSource:
             except Exception as e:
                 logger.warning("Error leyendo flujo de FFmpeg [%s]: %s", self.kind.value, e)
             finally:
-                if self._process and self._process.returncode is None:
+                if self._process and self._process.poll() is None:
                     try:
                         self._process.terminate()
-                        await asyncio.wait_for(self._process.wait(), timeout=1.0)
+                        await loop.run_in_executor(None, self._process.wait)
                     except Exception:
                         try:
                             self._process.kill()
+                            await loop.run_in_executor(None, self._process.wait)
                         except Exception:
                             pass
 
@@ -281,14 +303,15 @@ class AudioSource:
     async def stop(self) -> None:
         """Detiene de forma segura el subproceso y la tarea lectora."""
         self._stop_event.set()
-        if self._process and self._process.returncode is None:
+        loop = asyncio.get_running_loop()
+        if self._process and self._process.poll() is None:
             try:
                 self._process.terminate()
-                await asyncio.wait_for(self._process.wait(), timeout=1.0)
+                await loop.run_in_executor(None, self._process.wait)
             except Exception:
                 try:
                     self._process.kill()
-                    await self._process.wait()
+                    await loop.run_in_executor(None, self._process.wait)
                 except Exception:
                     pass
 
