@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NejoyT — Subtitulado Nerdearla 2026</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(23, 32, 54, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --badge-online: #10b981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.5rem 1rem;
+    }
+
+    header {
+      text-align: center;
+      max-width: 650px;
+      margin-bottom: 2.5rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.3rem 0.8rem;
+      border-radius: 9999px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    h1 {
+      font-size: 2.3rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #fff 40%, var(--primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      line-height: 1.5;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+      display: grid;
+      gap: 1.25rem;
+    }
+
+    .room-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .room-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+
+    .room-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .room-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--badge-online);
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      background-color: var(--badge-online);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .room-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .tag {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .room-actions {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .btn {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 0.7rem 1.2rem;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #0b0f19;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    footer {
+      margin-top: 3rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="badge">Nerdearla 2026 · Vibeathon</div>
+    <h1>NejoyT Subtítulos</h1>
+    <p class="subtitle">Transcripción continua y traducción simultánea de conferencias técnicas en tiempo real con Gemini 3.5 Live.</p>
+  </header>
+
+  <main class="container" id="rooms-list">
+    <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+      Cargando salas activas...
+    </div>
+  </main>
+
+  <footer>
+    Desarrollado para Nerdearla 2026 · Licencia Apache 2.0
+  </footer>
+
+  <script>
+    async function loadRooms() {
+      try {
+        const res = await fetch('/api/rooms');
+        const data = await res.json();
+        const container = document.getElementById('rooms-list');
+        
+        if (!data.rooms || data.rooms.length === 0) {
+          container.innerHTML = '<div style="text-align: center; color: var(--text-muted);">No hay salas configuradas actualmente.</div>';
+          return;
+        }
+
+        container.innerHTML = data.rooms.map(room => `
+          <article class="room-card">
+            <div class="room-header">
+              <h2 class="room-title">${room.name}</h2>
+              <div class="status-indicator">
+                <span class="status-dot"></span>
+                <span>${room.is_running ? 'EN VIVO' : 'STANDBY'}</span>
+              </div>
+            </div>
+            <div class="room-meta">
+              <span class="tag">Origen: <strong>${room.source_lang.toUpperCase()}</strong></span>
+              <span class="tag">Destinos: <strong>${room.target_langs.join(', ').toUpperCase()}</strong></span>
+              <span class="tag">Audiencia conectada: <strong>${room.subscribers}</strong></span>
+              <span class="tag">Frases emitidas: <strong>${room.subtitles_count}</strong></span>
+            </div>
+            <div class="room-actions">
+              <a href="/room/${room.id}" class="btn btn-primary">Abrir Subtítulos</a>
+              <a href="/room/${room.id}?overlay=1" target="_blank" class="btn btn-secondary">Overlay OBS</a>
+              <a href="/api/rooms/${room.id}/export?format=srt" class="btn btn-secondary">Descargar SRT</a>
+            </div>
+          </article>
+        `).join('');
+      } catch (err) {
+        console.error("Error cargando salas:", err);
+      }
+    }
+
+    loadRooms();
+    setInterval(loadRooms, 4000);
+  </script>
+</body>
+</html>

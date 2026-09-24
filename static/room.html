@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subtítulos en Vivo — NejoyT</title>
+  <style>
+    :root {
+      --bg: #07090e;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --border: rgba(255, 255, 255, 0.1);
+      --primary: #38bdf8;
+      --text: #f8fafc;
+      --text-interim: #94a3b8;
+      --text-time: #64748b;
+      --font-size: 1.5rem;
+      --line-height: 1.6;
+    }
+
+    body.high-contrast {
+      --bg: #000000;
+      --card-bg: #000000;
+      --border: #ffff00;
+      --primary: #ffff00;
+      --text: #ffff00;
+      --text-interim: #ffffff;
+      --text-time: #aaaaaa;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* BARRA SUPERIOR */
+    header.toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .room-name {
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: var(--text);
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    select, button {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 0.45rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    select:hover, button:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--primary);
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.35rem 0.7rem;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-badge.disconnected {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    /* CONTENEDOR DE SUBTÍTULOS */
+    main.subtitles-container {
+      flex: 1;
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 6rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .subtitle-block {
+      font-size: var(--font-size);
+      line-height: var(--line-height);
+      animation: fadeIn 0.25s ease-out;
+      word-break: break-word;
+    }
+
+    .subtitle-final {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .subtitle-interim {
+      color: var(--text-interim);
+      font-style: italic;
+      opacity: 0.85;
+      border-left: 3px solid var(--primary);
+      padding-left: 0.75rem;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* MODO OVERLAY PARA OBS (?overlay=1) */
+    body.overlay-mode {
+      background: transparent !important;
+      overflow: hidden;
+    }
+
+    body.overlay-mode header.toolbar {
+      display: none !important;
+    }
+
+    body.overlay-mode main.subtitles-container {
+      position: fixed;
+      bottom: 2rem;
+      left: 2rem;
+      right: 2rem;
+      max-width: none;
+      padding: 0;
+      justify-content: flex-end;
+    }
+
+    body.overlay-mode .subtitle-block {
+      background: rgba(0, 0, 0, 0.75);
+      border-radius: 10px;
+      padding: 0.8rem 1.4rem;
+      text-shadow: 2px 2px 5px #000, -2px -2px 5px #000, 2px -2px 5px #000, -2px 2px 5px #000;
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.4;
+      border-left: 6px solid #38bdf8;
+    }
+
+    body.overlay-mode .subtitle-interim {
+      color: #cbd5e1;
+      opacity: 0.95;
+    }
+  </style>
+</head>
+<body>
+  <header class="toolbar" id="toolbar">
+    <div class="brand">
+      <a href="/">← Salas</a>
+      <span class="room-name" id="room-title">Cargando sala...</span>
+    </div>
+
+    <div class="controls">
+      <label for="lang-select" style="font-size: 0.85rem; color: var(--text-interim);">Idioma:</label>
+      <select id="lang-select">
+        <option value="es" selected>Español</option>
+        <option value="en">English (Original)</option>
+      </select>
+
+      <button id="font-dec" title="Reducir fuente">A-</button>
+      <button id="font-inc" title="Aumentar fuente">A+</button>
+      <button id="contrast-toggle" title="Modo Alto Contraste">Alto Contraste</button>
+
+      <div class="status-badge" id="status-badge">
+        <span id="status-text">Conectando...</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="subtitles-container" id="subtitles">
+    <!-- Subtítulos finalizados -->
+    <div id="final-subtitles"></div>
+    <!-- Subtítulo interino en vivo -->
+    <div id="interim-subtitle" class="subtitle-block subtitle-interim" style="display: none;"></div>
+  </main>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const isOverlay = urlParams.get('overlay') === '1';
+    const roomId = window.location.pathname.split('/').pop() || 'auditorio-principal';
+
+    if (isOverlay) {
+      document.body.classList.add('overlay-mode');
+    }
+
+    // Configuración de visualización y accesibilidad
+    let fontSize = 1.5;
+    const fontIncBtn = document.getElementById('font-inc');
+    const fontDecBtn = document.getElementById('font-dec');
+    const contrastBtn = document.getElementById('contrast-toggle');
+    const langSelect = document.getElementById('lang-select');
+    const interimEl = document.getElementById('interim-subtitle');
+    const finalContainer = document.getElementById('final-subtitles');
+    const statusBadge = document.getElementById('status-badge');
+    const statusText = document.getElementById('status-text');
+
+    fontIncBtn.addEventListener('click', () => {
+      fontSize = Math.min(fontSize + 0.25, 3.0);
+      document.documentElement.style.setProperty('--font-size', fontSize + 'rem');
+    });
+
+    fontDecBtn.addEventListener('click', () => {
+      fontSize = Math.max(fontSize - 0.25, 1.0);
+      document.documentElement.style.setProperty('--font-size', fontSize + 'rem');
+    });
+
+    contrastBtn.addEventListener('click', () => {
+      document.body.classList.toggle('high-contrast');
+    });
+
+    // Auto-scroll
+    let userScrolled = false;
+    window.addEventListener('scroll', () => {
+      const scrollPos = window.innerHeight + window.scrollY;
+      const threshold = document.body.offsetHeight - 120;
+      userScrolled = scrollPos < threshold;
+    });
+
+    function scrollToBottom() {
+      if (!userScrolled) {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }
+    }
+
+    // WebSocket conexión
+    let ws = null;
+    let selectedLang = langSelect.value;
+
+    langSelect.addEventListener('change', () => {
+      selectedLang = langSelect.value;
+      // Re-conectar con el parámetro de idioma
+      connectWebSocket();
+    });
+
+    function connectWebSocket() {
+      if (ws) {
+        ws.close();
+      }
+
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws/${roomId}?lang=${selectedLang}`;
+      
+      statusBadge.className = 'status-badge';
+      statusText.textContent = 'Conectando...';
+
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        statusBadge.className = 'status-badge';
+        statusText.textContent = 'EN VIVO';
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+
+          if (data.event_type === 'interim') {
+            // Mostrar hipótesis parcial en tiempo real
+            interimEl.textContent = data.text;
+            interimEl.style.display = 'block';
+            scrollToBottom();
+          } 
+          else if (data.event_type === 'final' || data.event_type === 'translation') {
+            // Si el cliente eligió traducción y llega translation, o eligió original y llega final
+            const isRelevant = 
+              (selectedLang === data.language) ||
+              (data.event_type === 'final' && selectedLang === 'en' && data.language.startsWith('en')) ||
+              (data.event_type === 'final' && selectedLang === 'es' && data.language.startsWith('es'));
+
+            if (isRelevant || !data.language) {
+              interimEl.style.display = 'none';
+              interimEl.textContent = '';
+
+              const p = document.createElement('div');
+              p.className = 'subtitle-block subtitle-final';
+              p.textContent = data.text;
+              finalContainer.appendChild(p);
+
+              // Mantener máximo 40 frases en pantalla para evitar consumo de memoria
+              if (finalContainer.children.length > 40) {
+                finalContainer.removeChild(finalContainer.firstChild);
+              }
+              scrollToBottom();
+            }
+          }
+        } catch (e) {
+          console.error("Error parseando evento WebSocket:", e);
+        }
+      };
+
+      ws.onclose = () => {
+        statusBadge.className = 'status-badge disconnected';
+        statusText.textContent = 'Desconectado';
+        setTimeout(connectWebSocket, 3000);
+      };
+
+      ws.onerror = (err) => {
+        console.error("WebSocket error:", err);
+        ws.close();
+      };
+    }
+
+    // Cargar metadata de la sala
+    async function fetchRoomInfo() {
+      try {
+        const res = await fetch('/api/rooms');
+        const data = await res.json();
+        const current = data.rooms.find(r => r.id === roomId);
+        if (current) {
+          document.getElementById('room-title').textContent = current.name;
+          document.title = `${current.name} — Subtítulos`;
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    fetchRoomInfo();
+    connectWebSocket();
+  </script>
+</body>
+</html>
