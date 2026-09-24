@@ -199,15 +199,39 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, lang: Optional[
         await event_bus.unsubscribe(room_id, queue)
 
 
+@app.get("/api/hardware")
+async def get_hardware_info():
+    """
+    Retorna el acelerador y dispositivo de hardware detectado dinámicamente
+    (CUDA, ROCm, MPS o CPU con cuantización óptima).
+    """
+    from asr.device import detect_compute_device
+    hw = detect_compute_device()
+    return {
+        "status": "ok",
+        "device": hw.device,
+        "compute_type": hw.compute_type,
+        "device_index": hw.device_index,
+        "description": hw.description
+    }
+
+
 @app.get("/health")
 async def health_check():
-    """Comprobación de salud del sistema, modelo y salas activas."""
+    """Comprobación de salud del sistema, modelo, hardware y salas activas."""
+    from asr.device import detect_compute_device
+    hw = detect_compute_device()
     rooms = orchestrator.list_rooms()
     active_count = sum(1 for r in rooms if r.is_running)
     return {
         "status": "healthy",
         "service": "nerdearla-live-subtitles",
         "version": "0.2.0",
+        "hardware": {
+            "device": hw.device,
+            "compute_type": hw.compute_type,
+            "description": hw.description
+        },
         "total_rooms": len(rooms),
         "active_rooms": active_count,
         "live_model": settings.gemini_live_model,

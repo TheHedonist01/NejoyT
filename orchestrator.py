@@ -27,6 +27,7 @@ class RoomStatus(BaseModel):
     source_lang: str
     target_lang: str = "es"
     target_langs: List[str]
+    whisper_model_size: Optional[str] = "base"
     custom_vocabulary: List[str]
     state: RoomState
     is_running: bool
@@ -307,6 +308,8 @@ class SessionWorker:
                 self.room.target_langs.append(patch.target_lang)
         if patch.target_langs is not None:
             self.room.target_langs = patch.target_langs
+        if patch.whisper_model_size is not None:
+            self.room.whisper_model_size = patch.whisper_model_size
         if patch.custom_vocabulary is not None:
             self.room.custom_vocabulary = patch.custom_vocabulary
             self.translator.update_glossary(patch.custom_vocabulary)
@@ -326,6 +329,7 @@ class SessionWorker:
             source_lang=self.room.source_lang,
             target_lang=self.room.target_lang,
             target_langs=self.room.target_langs,
+            whisper_model_size=getattr(self.room, "whisper_model_size", "base") or "base",
             custom_vocabulary=self.room.custom_vocabulary,
             state=self.state,
             is_running=self.is_running,

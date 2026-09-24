@@ -1,3 +1,7 @@
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from fastapi.testclient import TestClient
 from main import app
 from orchestrator import orchestrator
@@ -6,12 +10,19 @@ def test_full_api():
     orchestrator.load_rooms("rooms.yaml")
     
     with TestClient(app) as client:
-        # 1. Health check
+        # 1. Health check & Hardware
         res = client.get("/health")
         assert res.status_code == 200
         data = res.json()
         assert data["status"] == "healthy"
+        assert "hardware" in data
         print("[OK] /health exitoso:", data)
+
+        res_hw = client.get("/api/hardware")
+        assert res_hw.status_code == 200
+        hw_data = res_hw.json()
+        assert "device" in hw_data
+        print("[OK] /api/hardware exitoso:", hw_data)
 
         # 2. Página index
         res_index = client.get("/")
