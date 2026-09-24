@@ -16,7 +16,7 @@ class RoomConfig(BaseModel):
 class Settings(BaseSettings):
     gemini_api_key: str = Field(..., alias="GEMINI_API_KEY")
     gemini_live_model: str = Field("gemini-3.5-transcribe-live", alias="GEMINI_LIVE_MODEL")
-    gemini_translate_model: str = Field("gemini-2.5-flash", alias="GEMINI_TRANSLATE_MODEL")
+    gemini_translate_model: str = Field("gemini-3.6-flash", alias="GEMINI_TRANSLATE_MODEL")
     log_level: str = Field("INFO", alias="LOG_LEVEL")
 
     model_config = SettingsConfigDict(
