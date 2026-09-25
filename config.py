@@ -68,6 +68,7 @@ class RoomConfig(BaseModel):
     speaker_threshold: float = Field(0.70, description="Umbral de similitud coseno para asignar el orador (> 0.70)")
     loop: bool = Field(False, description="Si es True y la fuente es un archivo, loopea continuamente")
     auto_start: bool = Field(False, description="Si es True, arranca automáticamente al bootear el servidor")
+    prevent_repetitions: bool = Field(True, description="Si es True, detecta y elimina bucles o palabras repetidas (ej. 'con con con') del ASR")
 
 
 class RoomPatch(BaseModel):
@@ -80,6 +81,7 @@ class RoomPatch(BaseModel):
     custom_vocabulary: Optional[List[str]] = None
     speakers: Optional[List[SpeakerProfile]] = None
     speaker_threshold: Optional[float] = None
+    prevent_repetitions: Optional[bool] = None
 
 
 class SettingsUpdate(BaseModel):

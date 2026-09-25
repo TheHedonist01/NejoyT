@@ -592,6 +592,10 @@
       z-index: 1200;
     }
 
+    #deleteConfirmModal {
+      z-index: 1300;
+    }
+
     .modal {
       background: rgba(18, 23, 36, 0.98);
       border: 1px solid var(--border-medium);
@@ -1202,7 +1206,7 @@
         </div>
 
 
-        <div class="form-row" style="margin-bottom: var(--sp-5); align-items: center;">
+        <div class="form-row" style="margin-bottom: var(--sp-5); align-items: center; flex-wrap: wrap; gap: var(--sp-4);">
           <div id="loopOptionGroup" style="display: block;">
             <label style="display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; font-size: 0.88rem;">
               <input type="checkbox" id="newRoomLoop" checked> Repetir archivo en bucle (loop)
@@ -1211,6 +1215,11 @@
           <div id="autoStartOptionGroup" style="display: block;">
             <label style="display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; font-size: 0.88rem;">
               <input type="checkbox" id="newRoomAutoStart"> Iniciar de inmediato
+            </label>
+          </div>
+          <div id="preventRepeatsGroup" style="display: block;">
+            <label style="display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; font-size: 0.88rem; color: var(--text-main);" title="Detecta y poda bucles de palabras repetidas del ASR (ej. 'con con con') tras 2 repeticiones">
+              <input type="checkbox" id="newRoomPreventRepeats" checked> Impedir palabras repetitivas (Anti-loop ASR)
             </label>
           </div>
         </div>
@@ -1417,6 +1426,67 @@
         <a id="obsPreviewLink" href="#" target="_blank" class="btn btn-outline btn-sm">Abrir Vista Previa ↗</a>
         <button type="button" class="btn btn-outline" onclick="closeObsModal()">Cerrar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Room Settings & Quality Filter Modal -->
+  <div class="modal-overlay" id="roomConfigModal">
+    <div class="modal" style="max-width: 520px;">
+      <div class="modal-header">
+        <div>
+          <h2>Configuración de Sala</h2>
+          <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 2px;" id="roomConfigModalSubtitle">Sala: ...</p>
+        </div>
+        <button type="button" class="modal-close" onclick="closeRoomConfigModal()">&times;</button>
+      </div>
+
+      <form id="roomConfigForm" onsubmit="handleSaveRoomConfig(event)">
+        <div class="form-group">
+          <label for="cfgRoomName">Nombre de la Sala</label>
+          <input type="text" class="form-control" id="cfgRoomName" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="cfgRoomSourceLang">Audio Base (Hablado)</label>
+            <select class="form-control" id="cfgRoomSourceLang">
+              <option value="es">Español</option>
+              <option value="en">Inglés</option>
+              <option value="pt">Portugués</option>
+              <option value="auto">Auto-detectar</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="cfgRoomTargetLang">Subtítulos Principales</label>
+            <select class="form-control" id="cfgRoomTargetLang">
+              <option value="es">Español</option>
+              <option value="en">Inglés</option>
+              <option value="pt">Portugués</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Segmento en Configuraciones: Control de Calidad ASR & Anti-repetición -->
+        <div style="background: var(--bg-inner); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: var(--sp-4); margin-bottom: var(--sp-4);">
+          <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); margin-bottom: var(--sp-2); display: flex; align-items: center; gap: 8px;">
+            <span>🛡️ Calidad de Transcripción (Anti-Bucle ASR)</span>
+          </div>
+          <label style="display: flex; align-items: flex-start; gap: var(--sp-2); cursor: pointer; font-size: 0.85rem; color: var(--text-main);">
+            <input type="checkbox" id="cfgRoomPreventRepeats" style="margin-top: 3px;">
+            <div>
+              <strong>Impedir palabras repetitivas</strong>
+              <div style="font-size: 0.76rem; color: var(--text-dim); margin-top: 2px; line-height: 1.4;">
+                Detecta y poda automáticamente alucinaciones o bucles de palabras y frases repetitivas (ej. "con con con con con") tras 2 o 3 ocurrencias consecutivas.
+              </div>
+            </div>
+          </label>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: var(--sp-2); margin-top: var(--sp-5);">
+          <button type="button" class="btn btn-outline" onclick="closeRoomConfigModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -1685,7 +1755,10 @@
       }
     }
 
+    let currentRoomsList = [];
+
     function renderRooms(rooms, force = false) {
+      currentRoomsList = rooms || [];
       if (!force && document.activeElement && (document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'INPUT')) {
         return;
       }
@@ -1768,7 +1841,13 @@
                   <option value="pt" ${room.target_lang === 'pt' ? 'selected' : ''}>Portugués</option>
                 </select>
               </div>
-              <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono); display: flex; justify-content: space-between; margin-top: 2px;">
+              <div class="lang-row" style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between;">
+                <span class="lang-label" title="Poda bucles de repetición tras 2 ocurrencias (ej. 'con con con')">Anti-Repetición:</span>
+                <button type="button" class="btn btn-sm" onclick="togglePreventRepetitions('${room.id}', ${room.prevent_repetitions !== false})" style="padding: 2px 10px; font-size: 0.72rem; font-family: var(--font-mono); font-weight: 600; border-radius: var(--radius-pill); cursor: pointer; border: 1px solid ${room.prevent_repetitions !== false ? 'rgba(16, 185, 129, 0.45)' : 'rgba(239, 68, 68, 0.35)'}; background: ${room.prevent_repetitions !== false ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.08)'}; color: ${room.prevent_repetitions !== false ? '#10b981' : '#f87171'};" title="${room.prevent_repetitions !== false ? 'Anti-repetición ACTIVO: poda bucles tras 2 repeticiones. Clic para desactivar.' : 'Anti-repetición DESACTIVADO. Clic para activar.'}">
+                  ${room.prevent_repetitions !== false ? '🛡️ Activo (Anti-loop)' : '⚠️ Inactivo'}
+                </button>
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono); display: flex; justify-content: space-between; margin-top: 4px;">
                 <span>Canales: ${(room.target_langs || []).join(', ').toUpperCase()}</span>
                 <span>${(room.custom_vocabulary || []).length} glosario</span>
               </div>
@@ -1785,13 +1864,14 @@
             ? `<button class="btn btn-danger btn-sm" onclick="stopRoom('${room.id}')">Detener</button>`
             : `<button class="btn btn-success btn-sm" onclick="startRoom('${room.id}')">Iniciar</button>`
           }
+              <button class="btn btn-outline btn-sm" onclick="openRoomConfigModal('${room.id}')" title="Configurar parámetros y filtro anti-repeticiones de esta sala">Ajustes</button>
               <button class="btn btn-outline btn-sm" onclick="openGlossaryModal('${room.id}', ${JSON.stringify(room.custom_vocabulary || []).replace(/"/g, '&quot;')})">Glosario</button>
               <a href="/room/${room.id}" target="_blank" class="btn btn-outline btn-sm" title="Abrir vista de audiencia">Audiencia</a>
-              <button class="btn btn-outline btn-sm" style="border-color: rgba(0, 203, 213, 0.4); color: var(--nerd-cyan);" onclick="openObsModal('${room.id}', '${room.name}')">OBS Overlay ▾</button>
+              <button class="btn btn-outline btn-sm" style="border-color: rgba(0, 203, 213, 0.4); color: var(--nerd-cyan);" onclick="openObsModal('${room.id}')">OBS Overlay ▾</button>
               <a href="/api/rooms/${room.id}/export?format=html" target="_blank" class="btn btn-outline btn-sm" title="Leer transcripción estructurada o imprimir PDF">Leer / PDF</a>
               <a href="/api/rooms/${room.id}/export?format=txt" class="btn btn-outline btn-sm" title="Descargar texto continuo para IA">TXT</a>
               <a href="/api/rooms/${room.id}/export?format=srt" class="btn btn-outline btn-sm" title="Descargar subtítulos SRT">SRT</a>
-              <button type="button" class="btn btn-outline btn-sm" style="color: var(--status-danger); border-color: rgba(239,68,68,0.3);" onclick="confirmDeleteRoom('${room.id}', '${escapeHtml(room.name || room.id).replace(/'/g, "\\'")}')">Eliminar</button>
+              <button type="button" class="btn btn-outline btn-sm" style="color: var(--status-danger); border-color: rgba(239,68,68,0.3);" onclick="confirmDeleteRoom('${room.id}')" title="Eliminar sala definitivamente">Eliminar</button>
             </div>
           </div>
         `;
@@ -1827,18 +1907,22 @@
 
     let pendingDeleteRoomId = null;
 
-    function confirmDeleteRoom(id, name) {
+    function confirmDeleteRoom(id) {
+      if (!id) return;
       pendingDeleteRoomId = id;
+      const room = (currentRoomsList || []).find(r => r.id === id);
+      const name = room ? (room.name || id) : id;
       const modal = document.getElementById('deleteConfirmModal');
       const targetName = document.getElementById('deleteTargetRoomName');
       const targetId = document.getElementById('deleteTargetRoomId');
-      if (targetName) targetName.innerText = name || id;
-      if (targetId) targetId.innerText = id;
+      if (targetName) targetName.textContent = name;
+      if (targetId) targetId.textContent = id;
       if (modal) {
         modal.classList.add('open');
       } else {
-        // Fallback inmediato si el modal no estuviera en DOM
-        executeDeleteRoom();
+        if (window.confirm(`¿Estás seguro de que deseas eliminar definitivamente la sala '${name}' (${id})?`)) {
+          executeDeleteRoom();
+        }
       }
     }
 
@@ -1849,8 +1933,8 @@
     }
 
     async function executeDeleteRoom() {
-      if (!pendingDeleteRoomId) return;
       const id = pendingDeleteRoomId;
+      if (!id) return;
       closeDeleteConfirmModal();
 
       showToast(`Eliminando sala '${id}'...`);
@@ -1860,10 +1944,10 @@
       if (btn) btn.disabled = true;
 
       try {
-        let res = await apiCall(`/api/rooms/${id}`, 'DELETE');
+        let res = await apiCall(`/api/rooms/${encodeURIComponent(id)}`, 'DELETE');
         if (!res) {
           // Fallback a POST por si Chrome o el proxy bloquea DELETE
-          res = await apiCall(`/api/rooms/${id}/delete`, 'POST');
+          res = await apiCall(`/api/rooms/${encodeURIComponent(id)}/delete`, 'POST');
         }
         if (res) {
           showToast(`Sala '${id}' eliminada con éxito.`);
@@ -2209,7 +2293,8 @@
         speakers: [],
         speaker_threshold: 0.70,
         loop: isLoop,
-        auto_start: document.getElementById('newRoomAutoStart').checked
+        auto_start: document.getElementById('newRoomAutoStart').checked,
+        prevent_repetitions: document.getElementById('newRoomPreventRepeats') ? document.getElementById('newRoomPreventRepeats').checked : true
       };
 
       try {
@@ -2313,8 +2398,10 @@
 
     async function openObsModal(roomId, roomName) {
       currentObsRoomId = roomId;
+      const room = (currentRoomsList || []).find(r => r.id === roomId);
+      const name = roomName || (room ? room.name : roomId) || roomId;
       const subtitle = document.getElementById('obsModalSubtitle');
-      if (subtitle) subtitle.innerText = `Sala: ${roomName || roomId} (${roomId})`;
+      if (subtitle) subtitle.textContent = `Sala: ${name} (${roomId})`;
       selectObsStyle('broadcast');
       await loadObsModalFonts();
       updateObsUrlDisplay();
@@ -2495,6 +2582,54 @@
       saveBtn.innerText = 'Guardar Cambios';
     }
 
+    async function togglePreventRepetitions(roomId, currentVal) {
+      const newVal = !currentVal;
+      showToast(`Actualizando filtro anti-repetición para ${roomId}...`);
+      const res = await apiCall(`/api/rooms/${roomId}`, 'PATCH', { prevent_repetitions: newVal });
+      if (res) {
+        showToast(`Filtro anti-repetición ${newVal ? 'ACTIVADO' : 'DESACTIVADO'} para ${roomId}.`);
+        loadRooms(true);
+      }
+    }
+
+    let activeConfigRoomId = null;
+    function openRoomConfigModal(roomId) {
+      activeConfigRoomId = roomId;
+      const room = (currentRoomsList || []).find(r => r.id === roomId);
+      if (!room) return;
+      document.getElementById('roomConfigModalSubtitle').innerText = `Sala: ${room.name} (${room.id})`;
+      document.getElementById('cfgRoomName').value = room.name || '';
+      document.getElementById('cfgRoomSourceLang').value = room.source_lang || 'es';
+      document.getElementById('cfgRoomTargetLang').value = room.target_lang || 'es';
+      document.getElementById('cfgRoomPreventRepeats').checked = (room.prevent_repetitions !== false);
+      document.getElementById('roomConfigModal').classList.add('open');
+    }
+
+    function closeRoomConfigModal() {
+      const modal = document.getElementById('roomConfigModal');
+      if (modal) modal.classList.remove('open');
+      activeConfigRoomId = null;
+    }
+
+    async function handleSaveRoomConfig(e) {
+      if (e) e.preventDefault();
+      if (!activeConfigRoomId) return;
+
+      const patchData = {
+        name: document.getElementById('cfgRoomName').value.trim(),
+        source_lang: document.getElementById('cfgRoomSourceLang').value,
+        target_lang: document.getElementById('cfgRoomTargetLang').value,
+        prevent_repetitions: document.getElementById('cfgRoomPreventRepeats').checked
+      };
+
+      const res = await apiCall(`/api/rooms/${activeConfigRoomId}`, 'PATCH', patchData);
+      if (res) {
+        showToast(`Configuración de sala '${activeConfigRoomId}' guardada con éxito.`);
+        closeRoomConfigModal();
+        loadRooms(true);
+      }
+    }
+
     function closeDevicesModal() {
       document.getElementById('devicesModal').classList.remove('open');
     }
@@ -2506,6 +2641,8 @@
         closeGlossaryModal();
         closeDevicesModal();
         closeObsModal();
+        closeRoomConfigModal();
+        closeDeleteConfirmModal();
       }
     });
 
@@ -2516,6 +2653,8 @@
         closeGlossaryModal();
         closeDevicesModal();
         closeObsModal();
+        closeRoomConfigModal();
+        closeDeleteConfirmModal();
       }
     });
 

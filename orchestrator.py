@@ -42,6 +42,40 @@ class RoomStatus(BaseModel):
     enrolled_speakers: List[str] = []
     started_at: Optional[float] = None
     uptime_seconds: Optional[int] = None
+    prevent_repetitions: bool = True
+
+
+def clean_repetitions(text: str, max_repeats: int = 2) -> str:
+    """
+    Detecta y poda repeticiones excesivas de palabras o frases consecutivas
+    típicas de alucinaciones o bucles de decodificación ASR (ej. 'con con con con con').
+    Permite hasta max_repeats ocurrencias (por defecto 2), eliminando el exceso para evitar hartazgo.
+    """
+    if not text:
+        return text
+
+    # 1. Frases de 3 palabras consecutivas repetidas: (w1 w2 w3) (w1 w2 w3)...
+    pattern_3 = re.compile(r'(\b\w+[\s,]+\w+[\s,]+\w+)(?:[\s,]+\1){' + str(max_repeats) + r',}', re.IGNORECASE)
+    def repl_3(m):
+        base = m.group(1).strip(' ,')
+        return ' '.join([base] * max_repeats)
+    text = pattern_3.sub(repl_3, text)
+
+    # 2. Frases de 2 palabras consecutivas repetidas: (w1 w2) (w1 w2)...
+    pattern_2 = re.compile(r'(\b\w+[\s,]+\w+)(?:[\s,]+\1){' + str(max_repeats) + r',}', re.IGNORECASE)
+    def repl_2(m):
+        base = m.group(1).strip(' ,')
+        return ' '.join([base] * max_repeats)
+    text = pattern_2.sub(repl_2, text)
+
+    # 3. Palabra individual repetida consecutivamente: (w) (w) (w)...
+    pattern_1 = re.compile(r'(\b\w+)(?:[\s,]+\1){' + str(max_repeats) + r',}', re.IGNORECASE)
+    def repl_1(m):
+        base = m.group(1).strip(' ,')
+        return ' '.join([base] * max_repeats)
+    text = pattern_1.sub(repl_1, text)
+
+    return re.sub(r'\s{2,}', ' ', text).strip()
 
 
 class SessionWorker:
@@ -184,75 +218,100 @@ class SessionWorker:
         return default
 
     async def _emit_final_segment(self, segment_text: str, speaker_lang: str, primary_tgt: str) -> None:
-        """Traduce, almacena en SQLite y publica un segmento final confirmado."""
-        cleaned = segment_text.strip()
-        if not cleaned:
+        """Traduce, almacena en SQLite y publica oraciones confirmadas con punto y aparte y filtro anti-bucle."""
+        raw_cleaned = segment_text.strip()
+        if not raw_cleaned:
             return
 
-        translations: Dict[str, str] = {speaker_lang: cleaned}
-        active_langs = event_bus.active_languages(self.room.id)
+        # Filtro anti-repeticiones (anti-bucle ASR) si está habilitado en la sala
+        if getattr(self.room, "prevent_repetitions", True):
+            raw_cleaned = clean_repetitions(raw_cleaned)
+            if not raw_cleaned:
+                return
 
+        # Requisito: Punto y aparte por oración.
+        # Separar el segmento por puntuación [.!?] para procesar y emitir cada oración
+        # de forma independiente, garantizando legibilidad limpia sin acumular bloques gigantes
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', raw_cleaned) if s.strip()]
+        if not sentences:
+            sentences = [raw_cleaned]
+
+        active_langs = event_bus.active_languages(self.room.id)
         candidate_targets = list(self.room.target_langs)
         if self.room.target_lang and self.room.target_lang not in candidate_targets:
             candidate_targets.append(self.room.target_lang)
 
-        for raw_target in candidate_targets:
-            tgt = raw_target.strip().lower()[:2]
-            if tgt == speaker_lang:
-                translations[tgt] = cleaned
+        for sentence in sentences:
+            cleaned = sentence.strip()
+            if not cleaned:
                 continue
 
-            # Si ningún cliente conectado está escuchando este idioma y NO es el principal, omitir
-            is_primary = (tgt == primary_tgt)
-            if not is_primary and (tgt not in active_langs):
-                continue
+            if getattr(self.room, "prevent_repetitions", True):
+                cleaned = clean_repetitions(cleaned)
+                if not cleaned:
+                    continue
 
-            translated_text = await self.translator.translate(
-                text=cleaned,
-                target_lang=tgt,
-                source_lang=speaker_lang
-            )
-            translations[tgt] = translated_text
+            translations: Dict[str, str] = {speaker_lang: cleaned}
 
-        # Guardar en el acumulador SQLite y memoria
-        record = subtitle_store.add_subtitle(
-            room_id=self.room.id,
-            original_text=cleaned,
-            original_lang=speaker_lang,
-            translations=translations,
-            speaker=None
-        )
+            for raw_target in candidate_targets:
+                tgt = raw_target.strip().lower()[:2]
+                if tgt == speaker_lang:
+                    translations[tgt] = cleaned
+                    continue
 
-        meta = {
-            "index": record.index,
-            "speaker": None,
-            "speaker_score": None
-        }
-        final_event = SubtitleEvent(
-            room_id=self.room.id,
-            event_type="final",
-            text=cleaned,
-            language=speaker_lang,
-            is_final=True,
-            metadata=meta
-        )
-        event_bus.publish(self.room.id, final_event)
+                # Si ningún cliente conectado está escuchando este idioma y NO es el principal, omitir
+                is_primary = (tgt == primary_tgt)
+                if not is_primary and (tgt not in active_langs):
+                    continue
 
-        for tgt, trans_text in translations.items():
-            if tgt == speaker_lang:
-                continue
-            trans_event = SubtitleEvent(
+                translated_text = await self.translator.translate(
+                    text=cleaned,
+                    target_lang=tgt,
+                    source_lang=speaker_lang
+                )
+                if getattr(self.room, "prevent_repetitions", True):
+                    translated_text = clean_repetitions(translated_text)
+                translations[tgt] = translated_text
+
+            # Guardar en el acumulador SQLite y memoria
+            record = subtitle_store.add_subtitle(
                 room_id=self.room.id,
-                event_type="translation",
-                text=trans_text,
-                language=tgt,
+                original_text=cleaned,
+                original_lang=speaker_lang,
+                translations=translations,
+                speaker=None
+            )
+
+            meta = {
+                "index": record.index,
+                "speaker": None,
+                "speaker_score": None
+            }
+            final_event = SubtitleEvent(
+                room_id=self.room.id,
+                event_type="final",
+                text=cleaned,
+                language=speaker_lang,
                 is_final=True,
                 metadata=meta
             )
-            event_bus.publish(self.room.id, trans_event)
+            event_bus.publish(self.room.id, final_event)
+
+            for tgt, trans_text in translations.items():
+                if tgt == speaker_lang:
+                    continue
+                trans_event = SubtitleEvent(
+                    room_id=self.room.id,
+                    event_type="translation",
+                    text=trans_text,
+                    language=tgt,
+                    is_final=True,
+                    metadata=meta
+                )
+                event_bus.publish(self.room.id, trans_event)
 
     async def _event_processor(self) -> None:
-        """Procesa los eventos emitidos por el ASR con segmentación streaming continua y traducción inmediata a español."""
+        """Procesa los eventos emitidos por el ASR con segmentación streaming continua, filtro anti-bucle y traducción inmediata."""
         try:
             assert self.asr is not None
             committed_prefix = ""
@@ -274,6 +333,9 @@ class SessionWorker:
                 # 1. Evento interim (hipótesis parcial continua)
                 if not asr_event.is_final:
                     full_text = asr_event.text.strip()
+                    if getattr(self.room, "prevent_repetitions", True):
+                        full_text = clean_repetitions(full_text)
+
                     if committed_prefix and full_text.startswith(committed_prefix):
                         new_text = full_text[len(committed_prefix):].strip()
                     else:
@@ -301,6 +363,9 @@ class SessionWorker:
                                 new_text = remaining_new
 
                     if new_text:
+                        if getattr(self.room, "prevent_repetitions", True):
+                            new_text = clean_repetitions(new_text)
+
                         # Publicar interim en idioma original para oyentes del idioma origen
                         event_bus.publish(self.room.id, SubtitleEvent(
                             room_id=self.room.id,
@@ -323,6 +388,8 @@ class SessionWorker:
                                         target_lang=primary_tgt,
                                         source_lang=speaker_lang
                                     )
+                                    if getattr(self.room, "prevent_repetitions", True):
+                                        translated_interim = clean_repetitions(translated_interim)
                                     if translated_interim:
                                         event_bus.publish(self.room.id, SubtitleEvent(
                                             room_id=self.room.id,
@@ -338,6 +405,9 @@ class SessionWorker:
 
                 # 2. Evento final emitido por el backend ASR
                 full_text = asr_event.text.strip()
+                if getattr(self.room, "prevent_repetitions", True):
+                    full_text = clean_repetitions(full_text)
+
                 if committed_prefix and full_text.startswith(committed_prefix):
                     remaining_final = full_text[len(committed_prefix):].strip()
                 else:
@@ -414,6 +484,8 @@ class SessionWorker:
         if patch.custom_vocabulary is not None:
             self.room.custom_vocabulary = patch.custom_vocabulary
             self.translator.update_glossary(patch.custom_vocabulary)
+        if patch.prevent_repetitions is not None:
+            self.room.prevent_repetitions = patch.prevent_repetitions
         logger.info("[%s] Parámetros de sala actualizados: %s", self.room.id, patch)
 
     def get_status(self) -> RoomStatus:
@@ -440,7 +512,8 @@ class SessionWorker:
             speakers_count=0,
             enrolled_speakers=[],
             started_at=self.started_at,
-            uptime_seconds=uptime
+            uptime_seconds=uptime,
+            prevent_repetitions=getattr(self.room, "prevent_repetitions", True)
         )
 
 

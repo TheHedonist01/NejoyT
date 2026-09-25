@@ -307,7 +307,23 @@
       line-height: var(--line-height);
       word-break: break-word;
       animation: fade-in 0.22s var(--ease);
-      padding: 2px 0;
+      padding: 4px 0;
+      margin-bottom: 1.15rem;
+    }
+
+    .subtitle-sentences-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .subtitle-sentence {
+      line-height: var(--line-height);
+      margin-bottom: 0.65rem;
+    }
+
+    .subtitle-sentence:last-child {
+      margin-bottom: 0;
     }
 
     .subtitle-final {
@@ -1077,10 +1093,31 @@
         badge.textContent = speaker;
         p.appendChild(badge);
       }
-      const t = document.createElement('span');
-      t.className = 'subtitle-text';
-      t.textContent = text;
-      p.appendChild(t);
+
+      // Separación por oración: punto y aparte limpio para que cada oración respire y no sature la pantalla
+      const rawText = (text || '').trim();
+      const sentences = rawText
+        .split(/(?<=[.!?])\s+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      if (sentences.length <= 1) {
+        const t = document.createElement('span');
+        t.className = 'subtitle-text';
+        t.textContent = rawText;
+        p.appendChild(t);
+      } else {
+        const wrap = document.createElement('div');
+        wrap.className = 'subtitle-sentences-wrap';
+        sentences.forEach(sent => {
+          const sDiv = document.createElement('div');
+          sDiv.className = 'subtitle-sentence';
+          sDiv.textContent = sent;
+          wrap.appendChild(sDiv);
+        });
+        p.appendChild(wrap);
+      }
+
       if (index) p.dataset.index = index;
       return p;
     }
