@@ -72,8 +72,8 @@ class EventBus:
             if event.event_type == "status" or sub_lang == "all":
                 should_send = True
             elif event.event_type == "interim":
-                # Regla 2: Interinos se transmiten en vivo para feedback en tiempo real
-                should_send = True
+                # Interinos deben coincidir con el idioma solicitado por el cliente para evitar mostrar inglés a usuarios de español
+                should_send = (event_lang == sub_lang)
             elif event_lang == sub_lang:
                 should_send = True
             else:

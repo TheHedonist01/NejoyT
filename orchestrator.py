@@ -3,6 +3,7 @@ import collections
 import logging
 import os
 import re
+import shutil
 import time
 import yaml
 from typing import Dict, List, Optional
@@ -182,10 +183,82 @@ class SessionWorker:
             return "es"
         return default
 
+    async def _emit_final_segment(self, segment_text: str, speaker_lang: str, primary_tgt: str) -> None:
+        """Traduce, almacena en SQLite y publica un segmento final confirmado."""
+        cleaned = segment_text.strip()
+        if not cleaned:
+            return
+
+        translations: Dict[str, str] = {speaker_lang: cleaned}
+        active_langs = event_bus.active_languages(self.room.id)
+
+        candidate_targets = list(self.room.target_langs)
+        if self.room.target_lang and self.room.target_lang not in candidate_targets:
+            candidate_targets.append(self.room.target_lang)
+
+        for raw_target in candidate_targets:
+            tgt = raw_target.strip().lower()[:2]
+            if tgt == speaker_lang:
+                translations[tgt] = cleaned
+                continue
+
+            # Si ningún cliente conectado está escuchando este idioma y NO es el principal, omitir
+            is_primary = (tgt == primary_tgt)
+            if not is_primary and (tgt not in active_langs):
+                continue
+
+            translated_text = await self.translator.translate(
+                text=cleaned,
+                target_lang=tgt,
+                source_lang=speaker_lang
+            )
+            translations[tgt] = translated_text
+
+        # Guardar en el acumulador SQLite y memoria
+        record = subtitle_store.add_subtitle(
+            room_id=self.room.id,
+            original_text=cleaned,
+            original_lang=speaker_lang,
+            translations=translations,
+            speaker=None
+        )
+
+        meta = {
+            "index": record.index,
+            "speaker": None,
+            "speaker_score": None
+        }
+        final_event = SubtitleEvent(
+            room_id=self.room.id,
+            event_type="final",
+            text=cleaned,
+            language=speaker_lang,
+            is_final=True,
+            metadata=meta
+        )
+        event_bus.publish(self.room.id, final_event)
+
+        for tgt, trans_text in translations.items():
+            if tgt == speaker_lang:
+                continue
+            trans_event = SubtitleEvent(
+                room_id=self.room.id,
+                event_type="translation",
+                text=trans_text,
+                language=tgt,
+                is_final=True,
+                metadata=meta
+            )
+            event_bus.publish(self.room.id, trans_event)
+
     async def _event_processor(self) -> None:
-        """Procesa los eventos emitidos por el ASR, traduce frases finales y publica en el bus."""
+        """Procesa los eventos emitidos por el ASR con segmentación streaming continua y traducción inmediata a español."""
         try:
             assert self.asr is not None
+            committed_prefix = ""
+            last_interim_trans_time = 0.0
+            last_interim_text = ""
+
             async for asr_event in self.asr.events():
                 if self._stop_event.is_set():
                     break
@@ -198,82 +271,84 @@ class SessionWorker:
 
                 primary_tgt = (self.room.target_lang or "es").strip().lower()[:2]
 
-                # 1. Evento interim (hipótesis parcial en idioma original al instante)
+                # 1. Evento interim (hipótesis parcial continua)
                 if not asr_event.is_final:
-                    event = SubtitleEvent(
-                        room_id=self.room.id,
-                        event_type="interim",
-                        text=asr_event.text,
-                        language=speaker_lang,
-                        is_final=False
-                    )
-                    event_bus.publish(self.room.id, event)
+                    full_text = asr_event.text.strip()
+                    if committed_prefix and full_text.startswith(committed_prefix):
+                        new_text = full_text[len(committed_prefix):].strip()
+                    else:
+                        new_text = full_text
+
+                    # Segmentación progresiva: si se detecta una oración terminada con [.!?]
+                    # y hay texto subsiguiente, confirmarla inmediatamente sin esperar fin de charla
+                    sent_match = re.search(r'^(.*?[.!?])\s+(\S.*)$', new_text, flags=re.DOTALL)
+                    if sent_match and len(sent_match.group(1).strip()) > 3:
+                        completed_sent = sent_match.group(1).strip()
+                        remaining_new = sent_match.group(2).strip()
+                        await self._emit_final_segment(completed_sent, speaker_lang, primary_tgt)
+                        committed_prefix = full_text[:len(full_text) - len(remaining_new)].strip()
+                        new_text = remaining_new
+                    else:
+                        # Si el orador habla continuamente sin puntos (>= 14 palabras), segmentar por cláusula
+                        words = new_text.split()
+                        if len(words) >= 14:
+                            clause_match = re.search(r'^(.*?)([,;]|\s+(?:and|but|so|because|however|y|pero|o|que)\s+)(\S.*)$', new_text, flags=re.IGNORECASE | re.DOTALL)
+                            if clause_match and len(clause_match.group(1).split()) >= 6:
+                                completed_clause = (clause_match.group(1) + (clause_match.group(2) if clause_match.group(2).strip() in (',', ';') else '')).strip()
+                                remaining_new = ((clause_match.group(2) + ' ' if clause_match.group(2).strip() not in (',', ';') else '') + clause_match.group(3)).strip()
+                                await self._emit_final_segment(completed_clause, speaker_lang, primary_tgt)
+                                committed_prefix = full_text[:len(full_text) - len(remaining_new)].strip()
+                                new_text = remaining_new
+
+                    if new_text:
+                        # Publicar interim en idioma original para oyentes del idioma origen
+                        event_bus.publish(self.room.id, SubtitleEvent(
+                            room_id=self.room.id,
+                            event_type="interim",
+                            text=new_text,
+                            language=speaker_lang,
+                            is_final=False
+                        ))
+
+                        # Si el orador habla en un idioma distinto al objetivo principal (ej. inglés -> español),
+                        # traducir el interim al instante para que la audiencia en español reciba subtítulos directamente en español
+                        if speaker_lang != primary_tgt:
+                            now = time.time()
+                            if (now - last_interim_trans_time >= 0.25) or (new_text != last_interim_text):
+                                last_interim_trans_time = now
+                                last_interim_text = new_text
+                                try:
+                                    translated_interim = await self.translator.translate(
+                                        text=new_text,
+                                        target_lang=primary_tgt,
+                                        source_lang=speaker_lang
+                                    )
+                                    if translated_interim:
+                                        event_bus.publish(self.room.id, SubtitleEvent(
+                                            room_id=self.room.id,
+                                            event_type="interim",
+                                            text=translated_interim,
+                                            language=primary_tgt,
+                                            is_final=False
+                                        ))
+                                except Exception as e:
+                                    logger.debug("[%s] Error traduciendo interim: %s", self.room.id, e)
 
                     continue
 
-                # 2. Traducciones a idiomas objetivo
-                translations: Dict[str, str] = {speaker_lang: asr_event.text}
-                active_langs = event_bus.active_languages(self.room.id)
+                # 2. Evento final emitido por el backend ASR
+                full_text = asr_event.text.strip()
+                if committed_prefix and full_text.startswith(committed_prefix):
+                    remaining_final = full_text[len(committed_prefix):].strip()
+                else:
+                    remaining_final = full_text
 
-                candidate_targets = list(self.room.target_langs)
-                if self.room.target_lang and self.room.target_lang not in candidate_targets:
-                    candidate_targets.append(self.room.target_lang)
+                if remaining_final:
+                    await self._emit_final_segment(remaining_final, speaker_lang, primary_tgt)
 
-                for raw_target in candidate_targets:
-                    tgt = raw_target.strip().lower()[:2]
-                    if tgt == speaker_lang:
-                        translations[tgt] = asr_event.text
-                        continue
-
-                    # Si ningún cliente conectado está escuchando este idioma y NO es el idioma principal configurado, omitir
-                    is_primary = (tgt == primary_tgt)
-                    if not is_primary and (tgt not in active_langs):
-                        continue
-
-                    translated_text = await self.translator.translate(
-                        text=asr_event.text,
-                        target_lang=tgt,
-                        source_lang=speaker_lang
-                    )
-                    translations[tgt] = translated_text
-
-                # 3. Guardar en el acumulador SQLite y memoria
-                record = subtitle_store.add_subtitle(
-                    room_id=self.room.id,
-                    original_text=asr_event.text,
-                    original_lang=speaker_lang,
-                    translations=translations,
-                    speaker=None
-                )
-
-                # 4. Emitir eventos
-                meta = {
-                    "index": record.index,
-                    "speaker": None,
-                    "speaker_score": None
-                }
-                final_event = SubtitleEvent(
-                    room_id=self.room.id,
-                    event_type="final",
-                    text=asr_event.text,
-                    language=speaker_lang,
-                    is_final=True,
-                    metadata=meta
-                )
-                event_bus.publish(self.room.id, final_event)
-
-                for tgt, trans_text in translations.items():
-                    if tgt == speaker_lang:
-                        continue
-                    trans_event = SubtitleEvent(
-                        room_id=self.room.id,
-                        event_type="translation",
-                        text=trans_text,
-                        language=tgt,
-                        is_final=True,
-                        metadata=meta
-                    )
-                    event_bus.publish(self.room.id, trans_event)
+                # Reset de acumuladores de turno
+                committed_prefix = ""
+                last_interim_text = ""
 
         except asyncio.CancelledError:
             pass
@@ -379,13 +454,49 @@ class Orchestrator:
         self._workers: Dict[str, SessionWorker] = {}
 
     def load_rooms(self, config_path: str = "rooms.yaml") -> None:
-        """Lee la configuración inicial de salas desde YAML."""
+        """Lee la configuración inicial de salas desde YAML o la auto-crea si no existe."""
+        if not os.path.exists(config_path):
+            example_path = "rooms.example.yaml"
+            if os.path.exists(example_path):
+                try:
+                    shutil.copyfile(example_path, config_path)
+                    logger.info("Archivo %s inicializado automáticamente desde %s", config_path, example_path)
+                except Exception as e:
+                    logger.warning("No se pudo copiar %s a %s: %s", example_path, config_path, e)
+            else:
+                default_data = {
+                    "rooms": [
+                        {
+                            "id": "auditorio-principal",
+                            "name": "Auditorio Principal",
+                            "kind": "mic",
+                            "backend": "cloud",
+                            "source_uri": "default",
+                            "source_lang": "en",
+                            "target_lang": "es",
+                            "target_langs": ["es", "en", "pt"],
+                            "whisper_model_size": "base",
+                            "custom_vocabulary": ["Nerdearla", "Kubernetes", "Docker", "Python", "FastAPI"],
+                            "speakers": [],
+                            "speaker_threshold": 0.7,
+                            "loop": False,
+                            "auto_start": False
+                        }
+                    ]
+                }
+                try:
+                    with open(config_path, "w", encoding="utf-8") as f:
+                        yaml.safe_dump(default_data, f, allow_unicode=True, sort_keys=False)
+                    logger.info("Archivo %s creado automáticamente con sala semilla.", config_path)
+                except Exception as e:
+                    logger.warning("No se pudo auto-crear %s: %s", config_path, e)
+
         if not os.path.exists(config_path):
             logger.warning("Archivo de configuración %s no encontrado.", config_path)
             return
 
         with open(config_path, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
+            data = yaml.safe_load(f) or {}
 
         rooms_data = data.get("rooms", [])
         for r_dict in rooms_data:

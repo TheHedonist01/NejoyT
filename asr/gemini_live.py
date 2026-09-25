@@ -42,7 +42,8 @@ class GeminiLiveASR(ASRBackend):
             response_modalities=["TEXT"],
             input_audio_transcription=types.AudioTranscriptionConfig(
                 language_codes=lang_codes,
-                custom_vocabulary=self.custom_vocabulary
+                custom_vocabulary=self.custom_vocabulary,
+                mode="SMART"
             )
         )
 

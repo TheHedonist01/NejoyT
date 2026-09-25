@@ -1122,6 +1122,12 @@
           }
 
           if (data.event_type === 'interim') {
+            const interimLang = (data.language || '').toLowerCase().substring(0, 2);
+            const userLang = (selectedLang || '').toLowerCase().substring(0, 2);
+            // Si el usuario eligió español y el interino está en inglés u otro idioma, no mostrarlo
+            if (userLang && interimLang && userLang !== interimLang && selectedLang !== 'all') {
+              return;
+            }
             standbyMsg.style.display = 'none';
             if (currentStyle === 'cine') {
               finalContainer.innerHTML = '';

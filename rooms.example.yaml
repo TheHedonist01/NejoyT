@@ -1,0 +1,23 @@
+rooms:
+  - id: auditorio-principal
+    name: Auditorio Principal
+    kind: mic
+    backend: cloud
+    source_uri: default
+    source_lang: en
+    target_lang: es
+    target_langs:
+      - es
+      - en
+      - pt
+    whisper_model_size: base
+    custom_vocabulary:
+      - Nerdearla
+      - Kubernetes
+      - Docker
+      - Python
+      - FastAPI
+    speakers: []
+    speaker_threshold: 0.7
+    loop: false
+    auto_start: false

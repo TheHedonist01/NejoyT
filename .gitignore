@@ -19,3 +19,6 @@ secrets/
 scratch/
 nejoyt-deploy/
 data/
+rooms.yaml
+*.db
+*.sqlite
