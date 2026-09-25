@@ -1,184 +1,93 @@
-# NejoyT — Transcripción y Traducción en Vivo para Conferencias
+# NejoyT
 
-> **Nerdearla 2026 · Vibeathon**  
-> Sistema *open source* de subtitulado simultáneo multi-sala, traducción en tiempo real y rotación transparente de sesiones impulsado por **Google Gemini 3.5 Transcribe Live** y **Gemini 3.6 Flash**.
+Subtitulado y traducción en vivo para conferencias de varias salas.
 
-[![Licencia](https://img.shields.io/badge/licencia-Apache%202.0-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.12-blue.svg)]()
-[![FastAPI](https://img.shields.io/badge/framework-FastAPI-009688.svg)]()
-[![Gemini](https://img.shields.io/badge/ASR-gemini--3.5--transcribe--live-4285F4.svg)]()
+Pensado para **Nerdearla 2026**. Open source. Una charla puede durar lo que dure: el audio no se corta cuando la sesión de streaming llega a su límite.
 
----
+[![Licencia Apache 2.0](https://img.shields.io/badge/licencia-Apache%202.0-blue.svg)](LICENSE)
+![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![Gemini](https://img.shields.io/badge/ASR-gemini--3.5--transcribe--live-4285F4)
 
-## 1. El Problema que Resuelve
-
-En conferencias masivas como **Nerdearla** ocurren más de 30 charlas técnicas en paralelo, muchas dictadas en inglés o con *code-switching* continuo. Los servicios comerciales tradicionales fallan estrepitosamente en tres frentes:
-1. **Destrozan la jerga técnica:** Convierten *Kubernetes* en "cuba netics", *CI/CD* en "sí y sí", o confunden nombres de herramientas (*Terraform*, *Prometheus*, *Istio*).
-2. **Son silos cerrados de alto costo:** Requieren hardware privativo o suscripciones privativas por hora/sala inasumibles para eventos comunitarios.
-3. **No resuelven la continuidad:** Las APIs de streaming basadas en WebSockets imponen límites estrictos de tiempo por sesión (ej. 10 minutos en `gemini-3.5-transcribe-live`), cortando el audio a mitad de una disertación de 45 minutos.
-
-**NejoyT** soluciona de raíz estos problemas:
-- Ingesta agnóstica universal vía **FFmpeg** (soporta micrófonos locales DirectShow/Pulse, archivos de prueba, o flujos RTMP/HLS).
-- Transcripción de bajísima latencia en modo `SMART` con **Glosario Técnico de Sesgo** (`custom_vocabulary`).
-- **Rotación con Solape (*Seamless Overlap Rotation*):** Conmutación invisible cada 9 minutos entre dos sesiones WebSocket concurrentes con cero palabras cortadas.
-- **Traducción Eficiente:** Traducción por lotes de oraciones completas a Español, Inglés y Portugués, protegiendo la cuota Free Tier de la API.
-- **Centro de Control Operativo (`/admin`):** Dashboard web reactivo para que los organizadores creen, inicien, pausen o editen glosarios en caliente para cualquier sala.
-- **Doble Salida:** Vista responsive accesible (alto contraste y tamaño de letra regulable) para la audiencia y vista **Overlay OBS** transparente (`?overlay=1`) para streaming.
-
----
-
-## 2. Arquitectura del Sistema
+Un proceso recibe el audio de la sala, lo transcribe con glosario técnico y publica subtítulos en español, inglés o portugués. La audiencia los ve en el navegador. El streaming los incrusta en OBS. Al terminar, la charla se exporta a SRT.
 
 ```
-┌────────────────────────────────────────────────────────┐
-│  FUENTES DE AUDIO (Micrófono / Archivo / RTMP / HLS)   │
-└───────────────────────────┬────────────────────────────┘
-                            │
-┌───────────────────────────▼────────────────────────────┐
-│  FFmpeg Subprocess Factory (audio/source.py)           │
-│  → Normaliza a PCM s16le, 16 kHz, mono (32.000 B/s)    │
-│  → Cola acotada (50 chunks / 5s) con descarte antiguo  │
-│  → Supervisor con reconexión automática en vivo        │
-└───────────────────────────┬────────────────────────────┘
-                            │ Chunks de 100 ms (3.200 B)
-┌───────────────────────────▼────────────────────────────┐
-│  SessionWorker (orchestrator.py - uno por sala activa) │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │ ASRBackend (SeamlessRotationASR en asr/rotation) │  │
-│  │  ├ Sesión A: gemini-3.5-transcribe-live (WS)     │  │  ← Rotación con solape
-│  │  └ Sesión B: gemini-3.5-transcribe-live (WS)     │  │     (Abre B a 8:30 min,
-│  │                                                  │  │      conmuta a 9:00 min)
-│  └────────────────────────┬─────────────────────────┘  │
-│                           │ interim (original) / final │
-│  ┌────────────────────────▼─────────────────────────┐  │
-│  │ Traductor Flash (translate/gemini_text.py)       │  │  ← Solo traduce FINALES
-│  │ (thinking_budget=0, glosario técnico, contexto)  │  │     (protege cuota)
-│  └────────────────────────┬─────────────────────────┘  │
-└───────────────────────────┼────────────────────────────┘
-                            │ Eventos (SubtitleEvent)
-┌───────────────────────────▼────────────────────────────┐
-│  EventBus en Memoria (bus.py - asyncio.Queue)          │
-└───┬───────────────────────────┬────────────────────┬───┘
-    │                           │                    │
-┌───▼──────────────┐   ┌────────▼─────────┐   ┌──────▼────────┐
-│ WebSocket Clientes│   │ Overlay OBS      │   │ Acumulador    │
-│ Audiencia (/room)│   │ (?overlay=1)     │   │ SRT / VTT     │
-└──────────────────┘   └──────────────────┘   └───────────────┘
+Mic / archivo / RTMP / HLS
+        │  FFmpeg → PCM 16 kHz mono
+        ▼
+   Transcripción en vivo          Rotación a los 9 min, con 30 s de solape
+        │
+        ▼
+   Traducción de la oración cerrada
+        │
+        ├── /room/…            audiencia
+        ├── ?overlay=1         OBS
+        └── export             SRT / VTT
 ```
 
----
+| | |
+|---|---|
+| Audio | Micrófono, archivo, RTMP o HLS. Siempre vía FFmpeg. |
+| Nube | `gemini-3.5-transcribe-live` + traducción Flash. |
+| Local | faster-whisper, Silero VAD y traducción en la máquina. Sin cuota. |
+| Salas | Un proceso aguanta unas 10–15 salas y menos de 250 MB de RAM. |
+| Control | Panel en `/admin`: crear, iniciar, pausar y editar el glosario en caliente. |
 
-## 3. El Mecanismo de Rotación con Solape (Anti-10 Minutos)
+## Índice
 
-El modelo de streaming `gemini-3.5-transcribe-live` impone una desconexión forzada a los **10 minutos** por WebSocket. NejoyT implementa un patrón de **solape sin fisuras** (`asr/rotation.py`):
+- [Arranque](#arranque)
+- [Probar con el audio de ejemplo](#probar-con-el-audio-de-ejemplo)
+- [Qué problema cierra](#qué-problema-cierra)
+- [Recorrido de una sala](#recorrido-de-una-sala)
+- [Arquitectura](#arquitectura)
+- [Rotación con solape](#rotación-con-solape)
+- [Dos backends](#dos-backends)
+- [Traducción](#traducción)
+- [Operar el evento](#operar-el-evento)
+- [Configuración](#configuración)
+- [Rutas](#rutas)
+- [Escala](#escala)
+- [Mapa del código](#mapa-del-código)
+- [Cuando algo no arranca](#cuando-algo-no-arranca)
+- [Licencia](#licencia)
 
-1. **t = 0:00:** Se abre la **Sesión A** y se transmiten sus transcripciones a la audiencia.
-2. **t = 8:30:** Se abre en paralelo la **Sesión B**. Durante la ventana de 30 segundos, el audio entrante se envía simultáneamente a **ambas sesiones**, pero solo se publican los eventos de A (evitando duplicaciones en pantalla).
-3. **t ≥ 9:00:** Tras recibir el primer evento `input_transcription` finalizado de la Sesión A después de los 9 minutos, el worker promueve la Sesión B a activa y detiene limpiamente la Sesión A.
-4. **Resultado:** Ninguna palabra cortada, latencia ininterrumpida y charlas continuas de cualquier duración.
+## Arranque
 
----
+Hace falta Docker, o Python 3.12 con [uv](https://github.com/astral-sh/uv) y FFmpeg. La clave de Gemini es opcional: sin ella el sistema queda en local.
 
----
-
-## 4. Backend Dual: Local Agnóstico de Hardware y Cloud (Google API)
-
-NejoyT cuenta con una arquitectura de backend intercambiable mediante la abstracción `ASRBackend`:
-
-```
-                    ┌───────────────────────────────┐
-                    │   Orquestador (Multi-Sala)   │
-                    └──────────────┬────────────────┘
-                                   │
-                ┌──────────────────┴──────────────────┐
-                ▼                                     ▼
-     [Backend: "cloud"]                     [Backend: "local"]
-  Gemini 3.5 Transcribe Live             Faster-Whisper + Silero VAD
-  - Conexión WebSocket streaming         - Detección de hardware automática
-  - Rotación transparente cada 9 min     - Inferencia 100% offline (sin cuota)
-  - Requiere GEMINI_API_KEY              - Ingesta de chunks de 100 ms
-```
-
-### Detección Automática de Hardware (Local)
-El backend local **no asume ninguna GPU específica ni fabricante**. Al iniciar, detecta automáticamente el mejor dispositivo disponible:
-- **NVIDIA:** CUDA con precisión `float16`.
-- **AMD:** ROCm / HIP con precisión `float16`.
-- **Apple Silicon:** MPS (Metal Performance Shaders) con precisión `float16`.
-- **CPU Universal:** Fallback universal con cuantización `int8` (corre en cualquier laptop o servidor).
-
-Al bootear, el sistema loguea claramente el hardware en uso:
-```
-[INFO] Backend local corriendo en: CUDA (float16) | Modelo Whisper: 'base'
-```
-
-### Modelo Whisper Configurable
-Puedes ajustar el tamaño del modelo según los recursos disponibles de tu equipo (`tiny`, `base`, `small`, `medium`) en `rooms.yaml` o mediante la API:
-- `tiny` (~75 MB): Ultra-rápido, ideal para CPUs modestas o Raspberry Pi 5.
-- `base` (~140 MB, default): Equilibrio óptimo entre precisión y latencia (< 80 ms en GPU).
-- `small` (~460 MB): Mayor precisión para acentos complejos.
-
----
-
-## 5. Pipeline de Traducción Simultánea y Baja Latencia
-
-### Idioma de Entrada Automático → Traducción al Idioma Elegido
-1. **Detección Automática:** Tanto en Cloud (`language_codes=[]`) como en Local (`language=None`), el sistema identifica el idioma hablado al vuelo y tolera *code-switching*.
-2. **Traducción Local Integrada (CTranslate2 / MarianMT):** Las frases finales se traducen en la máquina local en **menos de 100 ms**, garantizando subtítulos en español (o el idioma elegido) casi en tiempo real sin agotar cuotas de API.
-3. **Manejo de Hipótesis Parciales (`interim`):** Para la audiencia que escucha en español mientras el orador habla en inglés, el sistema genera hipótesis traducidas al instante para que la pantalla siempre muestre texto comprensible en español.
-4. **Protección del Glosario Técnico:** Los términos clave (*Kubernetes, Docker, FastAPI, Prometheus, Nerdearla*) se aíslan mediante expresiones regulares antes de la traducción y se restauran fielmente en la salida.
-
----
-
-## 6. Requisitos y Puesta en Marcha
-
-### Opción A: Despliegue en 1 Comando con Docker (Recomendado)
-
-El sistema incluye una configuración optimizada con **Multi-Stage Build** y **FFmpeg preinstalado**, listo para levantar sin requerir dependencias locales:
+### Docker
 
 ```bash
-# 1. Configurar credenciales en .env
 cp .env.example .env
-# Edita .env y coloca tu GEMINI_API_KEY (o déjalo en blanco para modo 100% local)
-
-# 2. Compilar y levantar con Docker Compose
 docker compose up --build -d
-
-# En Windows también puedes hacer doble clic en: start.bat
-```
-
-Para monitorear los logs del contenedor en vivo:
-```bash
 docker compose logs -f nejoyt
 ```
 
-Para detener el servicio:
-```bash
-docker compose down
-```
+En Windows también vale doble clic en `start.bat`. Para bajar el servicio: `docker compose down`.
 
----
+La imagen ya trae FFmpeg.
 
-### Opción B: Ejecución Local Nativa con `uv`
-
-#### Prerrequisitos
-- Python 3.12+
-- [uv](https://github.com/astral-sh/uv) (gestor de dependencias ultrarrápido)
-- FFmpeg instalado en el sistema (detectado automáticamente en Windows / Linux / macOS)
-- Opcional: GPU NVIDIA/AMD/Apple Silicon para aceleración local, o API Key de Google AI Studio para modo Cloud.
-
-#### Instalación y Ejecución
+### En la máquina, con uv
 
 ```bash
-# 1. Instalar dependencias del lockfile con uv
 uv sync
-
-# 2. Configurar variables de entorno
 cp .env.example .env
+uv run uvicorn main:app --port 8000
 ```
 
-Configura tu `.env`:
+FFmpeg tiene que estar en el `PATH`. El arranque lo busca en Windows, Linux y macOS.
+
+| Para quién | URL |
+|---|---|
+| Audiencia | http://localhost:8000/ |
+| Operador | http://localhost:8000/admin |
+| Salud | http://localhost:8000/health |
+| API | http://localhost:8000/docs |
+
+`.env` mínimo:
+
 ```env
-GEMINI_API_KEY="tu_api_key_aqui"  # Opcional si operas en modo 100% local
+GEMINI_API_KEY=""                        # vacío = 100 % local
 GEMINI_LIVE_MODEL="gemini-3.5-transcribe-live"
 GEMINI_TRANSLATE_MODEL="gemini-3.5-flash-lite"
 ADMIN_TOKEN="nerdearla2026"
@@ -186,57 +95,271 @@ LOG_LEVEL="INFO"
 PORT=8000
 ```
 
-#### Ejecutar el Servidor
+## Probar con el audio de ejemplo
 
-```bash
-uv run uvicorn main:app --port 8000
+`samples/` ya trae audio. `rooms.yaml` carga las salas en `STANDBY`.
+
+1. Abrí http://localhost:8000/admin.
+2. En **Auditorio Principal** (modo local), **Iniciar**.
+3. Audiencia: http://localhost:8000/room/auditorio-principal
+4. Overlay para OBS: http://localhost:8000/room/auditorio-principal?overlay=1
+5. Al cerrar, exportá el SRT: http://localhost:8000/api/rooms/auditorio-principal/export?format=srt
+
+Los subtítulos tienen que aparecer en menos de un segundo, traducidos al español.
+
+## Qué problema cierra
+
+En un evento como Nerdearla hay decenas de charlas a la vez. Muchas en inglés, y muchas mezclando idiomas en la misma frase. El subtitulado comercial se cae en tres sitios concretos:
+
+| Falla | Qué se ve en pantalla |
+|---|---|
+| Jerga | *Kubernetes* pasa a “cuba netics”, *CI/CD* a “sí y sí”, y se pierden *Terraform*, *Prometheus*, *Istio*. |
+| Costo y candado | Hardware propio o una suscripción por hora y por sala. Inviable para un evento comunitario. |
+| Tope de sesión | `gemini-3.5-transcribe-live` corta el WebSocket a los 10 minutos. Una charla de 45 queda muda a la mitad. |
+
+NejoyT responde con cuatro piezas:
+
+- **Glosario de la sala** (`custom_vocabulary`), aplicado en modo `SMART`, para que los nombres de herramientas sobrevivan.
+- **Rotación con solape.** A los 8:30 se abre una segunda sesión; a los 9:00 se conmuta, con la palabra en curso ya cerrada.
+- **Traducción de la oración ya cerrada**, a español, inglés y portugués. En la nube eso ahorra cuota. En local no hay cuota.
+- **Dos vistas del mismo texto:** una para la sala (contraste alto, tamaño de letra ajustable) y una transparente para OBS (`?overlay=1`).
+
+## Recorrido de una sala
+
+1. El operador crea la sala en `/admin` y carga el glosario: herramientas, nombres propios, siglas del talk.
+2. Elige la fuente: micrófono de la sala, archivo o un RTMP/HLS que llega desde OBS o la mesa de sonido.
+3. Al dar **Iniciar**, FFmpeg normaliza todo a PCM `s16le`, 16 kHz, mono, en trozos de 100 ms (3.200 bytes).
+4. El reconocedor publica hipótesis mientras la frase sigue abierta. Cuando la cierra, esa oración se traduce y queda fija.
+5. La audiencia lee `/room/{id}`. El streaming lee la misma sala con `?overlay=1`.
+6. Si la charla pasa de 9 minutos y el backend es cloud, la sesión de respaldo toma el relevo sin cambiar la pantalla.
+7. Al terminar, el acumulador entrega SRT y VTT.
+
+El glosario se puede editar con la sala ya en vivo. El cambio entra en caliente.
+
+## Arquitectura
+
+```mermaid
+flowchart TD
+    src["Micrófono, archivo, RTMP o HLS"]
+    ff["FFmpeg en audio/source.py<br/>PCM 16 kHz mono · 32.000 B/s"]
+    q["Cola de 50 trozos · 5 s<br/>si se llena, se descarta el más viejo"]
+    w["SessionWorker<br/>uno por sala activa"]
+    asr["ASRBackend"]
+    cloud["Cloud: dos sesiones Live<br/>y rotación con solape"]
+    local["Local: faster-whisper<br/>+ Silero VAD"]
+    tr["Traducción de la oración final<br/>glosario intacto"]
+    bus["EventBus · asyncio.Queue"]
+    web["Audiencia /room"]
+    obs["OBS ?overlay=1"]
+    sub["SRT / VTT"]
+
+    src --> ff --> q --> w --> asr
+    asr --> cloud
+    asr --> local
+    cloud --> tr
+    local --> tr
+    tr --> bus
+    bus --> web
+    bus --> obs
+    bus --> sub
 ```
 
-El sistema estará disponible en:
-- **Portal de Audiencia:** [http://localhost:8000/](http://localhost:8000/)
-- **Centro de Control / Operador:** [http://localhost:8000/admin](http://localhost:8000/admin)
-- **Comprobación de Salud (Healthcheck):** [http://localhost:8000/health](http://localhost:8000/health)
-- **Documentación API Swagger:** [http://localhost:8000/docs](http://localhost:8000/docs)
+Cada sala activa tiene su propio `SessionWorker` (`orchestrator.py`). El audio entra por un subproceso de FFmpeg con reconexión si la fuente en vivo se cae. Los clientes se suscriben a un `EventBus` en memoria (`bus.py`) y reciben `SubtitleEvent`.
 
----
+| Dato de audio | Valor |
+|---|---|
+| Formato interno | PCM `s16le`, 16 kHz, mono |
+| Caudal | 32.000 B/s |
+| Trozo | 100 ms · 3.200 B |
+| Cola | 50 trozos · 5 s, descarte del más antiguo |
 
-## 7. Pruebas Rápidas con Audios Incluidos
+Esa cola es el amortiguador. Si el reconocedor se atrasa, se descarta el audio viejo y la sala sigue en el presente.
 
-El repositorio incluye muestras de audio en la carpeta `samples/` listas para probar de inmediato:
+## Rotación con solape
 
-1. Ingresa al panel de control en [http://localhost:8000/admin](http://localhost:8000/admin).
-2. Verás las salas semilla cargadas desde `rooms.yaml` en estado `STANDBY`.
-3. Haz clic en **▶ Iniciar** en la sala `Auditorio Principal` (Modo Local).
-4. Abre la vista de audiencia en [http://localhost:8000/room/auditorio-principal](http://localhost:8000/room/auditorio-principal) o el Overlay OBS en [http://localhost:8000/room/auditorio-principal?overlay=1](http://localhost:8000/room/auditorio-principal?overlay=1).
-5. Observarás cómo fluyen los subtítulos en tiempo real con latencia sub-segundo traducidos automáticamente al español.
-6. Al finalizar, exporta el archivo de subtítulos generado en [http://localhost:8000/api/rooms/auditorio-principal/export?format=srt](http://localhost:8000/api/rooms/auditorio-principal/export?format=srt).
+`gemini-3.5-transcribe-live` cierra el WebSocket a los **10 minutos**. El relevo ocurre antes, sobre una frase ya cerrada.
 
----
+La lógica vive en `asr/rotation.py` (`SeamlessRotationASR`):
 
-## 8. Operación en Vivo: Micrófono y Streaming RTMP
+| Momento | Qué pasa | Qué ve el público |
+|---|---|---|
+| 0:00 | Abre la sesión A. | Los subtítulos de A. |
+| 8:30 | Abre la sesión B. El mismo audio entra en A y en B. | Sigue viendo solo A. |
+| 9:00 | Llega el primer `input_transcription` final de A pasados los 9 minutos. | B pasa a ser la sesión activa. A se cierra limpia. |
+| 9:00 en adelante | El ciclo se repite con el par siguiente. | Una charla de cualquier duración. |
 
-### Uso con Micrófono de la Sala
-1. En `/admin`, haz clic en **Detectar Micrófonos**. El sistema consultará los dispositivos DirectShow (Windows) o Pulse/ALSA (Linux).
-2. Haz clic en **+ Nueva Sala**, selecciona tipo **Micrófono**, y elige el dispositivo detectado.
-3. Al iniciar la sala, el audio del micrófono se procesará en tiempo real en tu GPU o CPU local.
+```mermaid
+sequenceDiagram
+    participant Audio
+    participant A as Sesión A
+    participant B as Sesión B
+    participant Público
 
-### Ingesta RTMP desde OBS / Mesa de Sonido
-Configura la sala con:
+    Note over A: 0:00 · abre A
+    Audio->>A: PCM
+    A->>Público: subtítulos
+
+    Note over A,B: 8:30 · abre B, audio a las dos
+    Audio->>A: PCM
+    Audio->>B: PCM
+    A->>Público: se publica solo A
+
+    Note over A,B: 9:00 · primer final de A después del minuto 9
+    B->>Público: B queda activa
+    Note over A: A se cierra
+```
+
+La ventana de 30 segundos le da a B tiempo de enganchar contexto antes de quedar a la vista. El relevo espera una oración cerrada de A: la conmutación cae entre frases, no en medio de una palabra.
+
+En local no hay tope de 10 minutos. La rotación es el mecanismo del backend cloud.
+
+## Dos backends
+
+El orquestador habla con un `ASRBackend`. La sala elige `cloud` o `local`.
+
+| | Cloud | Local |
+|---|---|---|
+| Reconocimiento | `gemini-3.5-transcribe-live` por WebSocket | faster-whisper + Silero VAD |
+| Sesión larga | Rotación cada 9 minutos | Sigue mientras haya audio |
+| Traducción | Gemini Flash, solo la oración cerrada | CTranslate2 / MarianMT en la máquina, por debajo de 100 ms |
+| Qué hace falta | `GEMINI_API_KEY` | El modelo Whisper descargado. GPU si hay; CPU si no. |
+| Idioma | `language_codes=[]` detecta solo y tolera el cambio de idioma a mitad de frase | `language=None`, misma idea |
+
+### Hardware local
+
+Al arrancar, el backend local elige el mejor dispositivo que encuentra y lo deja escrito en el log:
+
+```text
+[INFO] Backend local corriendo en: CUDA (float16) | Modelo Whisper: 'base'
+```
+
+| Hardware | Precisión |
+|---|---|
+| NVIDIA CUDA | `float16` |
+| AMD ROCm / HIP | `float16` |
+| Apple Silicon (MPS) | `float16` |
+| CPU | `int8` |
+
+### Tamaño de Whisper
+
+Se cambia en `rooms.yaml` o por la API.
+
+| Modelo | Peso | Cuándo usarlo |
+|---|---|---|
+| `tiny` | ~75 MB | CPU modesta o Raspberry Pi 5. |
+| `base` | ~140 MB | Default. En GPU, latencia por debajo de 80 ms. |
+| `small` | ~460 MB | Acentos difíciles, más precisión. |
+| `medium` | mayor | Más preciso y más pesado. |
+
+## Traducción
+
+La audiencia elige el idioma de lectura. El orador habla en el suyo; el detector lo sigue, también cuando mezcla idiomas en la misma frase.
+
+1. Mientras la frase está abierta, la pantalla muestra la hipótesis (`interim`) para que la línea no se quede en blanco.
+2. Cuando el reconocedor cierra la oración (`final`), esa frase se traduce y reemplaza a la hipótesis.
+3. En cloud, la llamada de traducción (en `translate/gemini_text.py`) se reserva a esos finales, con `thinking_budget=0` y el glosario de la sala. Así se cuida el free tier.
+4. En local, CTranslate2 / MarianMT traduce la frase cerrada en la misma máquina.
+5. Antes de traducir, los términos del glosario se apartan con una expresión regular y se restauran tal cual. *Kubernetes*, *Docker*, *FastAPI*, *Prometheus* y *Nerdearla* no se “interpretan”.
+
+Idiomas de salida: español, inglés y portugués.
+
+## Operar el evento
+
+### Micrófono
+
+1. En `/admin`, **Detectar micrófonos**.
+2. Windows lista dispositivos DirectShow. Linux lista Pulse y ALSA.
+3. **Nueva sala**, tipo **Micrófono**, y elegí el dispositivo.
+4. **Iniciar**. El audio entra a la GPU o a la CPU de esa máquina.
+
+### RTMP o HLS
+
+En la sala:
+
 - Tipo: `Stream RTMP/HLS`
 - URI: `rtmp://0.0.0.0:1935/live/auditorio1`
-FFmpeg esperará el flujo entrante desde tu encoder o consola de audio y comenzará a transcribir apenas detecte señal.
 
----
+FFmpeg queda esperando el flujo de OBS o de la consola. En cuanto hay señal, empieza a transcribir.
 
-## 9. Escalabilidad: de 2 a N Salas
+### Overlay de OBS
 
-NejoyT utiliza un diseño 100% asíncrono no bloqueante (`asyncio`), donde las operaciones de red (WebSockets hacia Gemini y hacia clientes) son I/O *bound*.
+Agregá una fuente **Navegador** apuntando a:
 
-- **Consumo de Recursos:** Un solo proceso Python maneja cómodamente entre **10 y 15 salas simultáneas** consumiendo menos de 250 MB de memoria RAM y bajo uso de CPU (FFmpeg solo realiza resampleo de audio a 16 kHz mono).
-- **Escalado Horizontal:** Para conferencias de escala masiva (20+ salas), basta con desplegar contenedores independientes repartiendo los IDs de sala mediante variables de entorno o Docker Compose.
+```text
+http://<host>:8000/room/<id-de-sala>?overlay=1
+```
 
----
+El fondo es transparente. El texto es el mismo que ve la audiencia.
 
-## 10. Licencia
+### Glosario en caliente
 
-Distribuido bajo licencia **Apache 2.0**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
+Desde `/admin`, con la sala ya iniciada, editá la lista de términos. Sirve para el nombre de una herramienta que el orador va a decir dentro de diez minutos y que no estaba en el arranque.
+
+### Exportar
+
+```text
+http://localhost:8000/api/rooms/<id-de-sala>/export?format=srt
+```
+
+El acumulador guarda SRT y VTT durante la sesión.
+
+## Configuración
+
+| Variable | Rol |
+|---|---|
+| `GEMINI_API_KEY` | Clave de Google AI Studio. Vacía: el sistema opera en local. |
+| `GEMINI_LIVE_MODEL` | Modelo de transcripción en vivo. Default: `gemini-3.5-transcribe-live`. |
+| `GEMINI_TRANSLATE_MODEL` | Modelo Flash de traducción en cloud. Default de ejemplo: `gemini-3.5-flash-lite`. |
+| `ADMIN_TOKEN` | Token del panel de operación. |
+| `LOG_LEVEL` | Nivel de log. `INFO` muestra el hardware elegido en local. |
+| `PORT` | Puerto HTTP. Default `8000`. |
+
+Las salas semilla viven en `rooms.yaml`: fuente, backend, modelo Whisper e idioma.
+
+## Rutas
+
+| Ruta | Uso |
+|---|---|
+| `/` | Portal de la audiencia. |
+| `/admin` | Crear, iniciar, pausar y editar glosarios. |
+| `/room/{id}` | Subtítulos de una sala. Contraste alto y tamaño de letra regulable. |
+| `/room/{id}?overlay=1` | La misma sala, lista para una fuente Navegador de OBS. |
+| `/health` | Salud del proceso. |
+| `/docs` | OpenAPI / Swagger. |
+| `/api/rooms/{id}/export?format=srt` | Descarga del subtítulo acumulado. |
+
+## Escala
+
+La red es I/O: WebSockets hacia Gemini y hacia los navegadores, sobre `asyncio`. FFmpeg solo remuestrea a 16 kHz mono. Por eso un solo proceso de Python sostiene **10 a 15 salas** con menos de **250 MB** de RAM y poca CPU.
+
+Para 20 salas o más, corré un contenedor por grupo de salas y repartí los IDs con variables de entorno o con Compose. Cada contenedor es independiente.
+
+## Mapa del código
+
+| Pieza | Responsabilidad |
+|---|---|
+| `main:app` | Aplicación FastAPI. |
+| `audio/source.py` | FFmpeg, normalización, cola y reconexión de la fuente. |
+| `orchestrator.py` | Un `SessionWorker` por sala activa. |
+| `asr/rotation.py` | `SeamlessRotationASR`: sesiones A/B y el relevo a los 9 minutos. |
+| `translate/gemini_text.py` | Traducción cloud de la oración cerrada. |
+| `bus.py` | `EventBus` en memoria. |
+| `rooms.yaml` | Salas semilla. |
+| `samples/` | Audio para probar sin micrófono. |
+| `.env.example` | Variables de arranque. |
+| `start.bat` | Atajo de Docker en Windows. |
+
+## Cuando algo no arranca
+
+| Síntoma | Dónde mirar |
+|---|---|
+| La sala cloud no transcribe | `GEMINI_API_KEY` vacía la deja en local. Para cloud, la clave tiene que estar en `.env`. |
+| FFmpeg no aparece en el modo nativo | Tiene que estar en el `PATH`. La imagen de Docker ya lo incluye. |
+| El subtítulo se atrasa y después “salta” | La cola guarda 5 segundos. Pasado eso, tira el audio viejo a propósito: la sala prioriza el presente. |
+| A los 10 minutos la nube corta | Es el límite del WebSocket. Con la rotación activa el relevo ocurre a los 9:00, sobre una oración ya cerrada. |
+| Un término técnico sale traducido | Agregalo al glosario de esa sala. Se puede hacer con la sala en vivo. |
+| El log no dice qué GPU usa | En local, el arranque escribe el dispositivo y la precisión. Buscá la línea `Backend local corriendo en`. |
+
+## Licencia
+
+Apache 2.0. El texto está en [LICENSE](LICENSE).
