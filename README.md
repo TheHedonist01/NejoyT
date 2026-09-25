@@ -360,6 +360,13 @@ Para 20 salas o más, corré un contenedor por grupo de salas y repartí los IDs
 | Un término técnico sale traducido | Agregalo al glosario de esa sala. Se puede hacer con la sala en vivo. |
 | El log no dice qué GPU usa | En local, el arranque escribe el dispositivo y la precisión. Buscá la línea `Backend local corriendo en`. |
 
+## Últimas actualizaciones
+
+- **Filtro antirepetidor:** Supresión activa de texto duplicado durante la rotación de sesiones A/B; los subtítulos de la sesión en espera se descartan durante la ventana de solape hasta el cierre exacto de la frase.
+- **Protección de cuota Free Tier:** Se limitó la traducción exclusivamente a frases finales cerradas (`is_final=True`) y se sumó una caché en memoria de 500 entradas para evitar consumo innecesario de tokens.
+- **Traducción resiliente (Gemini 3.6 Flash):** Cadena de fallback automático y timeout extendido a 12 s para evitar bloqueos por saturación (503) o límites estrictos de peticiones por día (429).
+- **WebSockets estables y pipeline ágil:** Handshake robusto sin caídas en las conexiones de sala (`/ws/{id}`) y simplificación del panel `/admin` para garantizar mínima latencia en vivo.
+
 ## Licencia
 
 Apache 2.0. El texto está en [LICENSE](LICENSE).
