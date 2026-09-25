@@ -1,0 +1,33 @@
+services:
+  nejoyt:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nejoyt-app
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-${GOOGLE_API_KEY:-}}
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-nerdearla2026}
+      - GEMINI_LIVE_MODEL=${GEMINI_LIVE_MODEL:-gemini-3.5-transcribe-live}
+      - GEMINI_TRANSLATE_MODEL=${GEMINI_TRANSLATE_MODEL:-gemini-3.5-flash-lite}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PORT=8000
+    volumes:
+      # Montaje para actualización en caliente de salas y glosario técnico
+      - ./rooms.yaml:/app/rooms.yaml
+      - ./glossary.yaml:/app/glossary.yaml
+      # Persistencia de base de datos SQLite y exportación SRT/VTT
+      - ./data:/app/data
+      # Montaje opcional para muestras multimedia
+      - ./samples:/app/samples:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

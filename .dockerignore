@@ -1,0 +1,25 @@
+# Control de versiones y configuración de IDE
+.git
+.gitignore
+.idea
+.vscode
+.gemini
+
+# Entornos virtuales locales y cachés de Python
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+
+# Secretos y credenciales locales
+.env
+.env.local
+
+# Archivos de prueba temporales y scratch
+scratch/
+*.srt
+*.vtt
+data/*.db
+data_store/

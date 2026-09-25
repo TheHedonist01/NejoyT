@@ -131,44 +131,71 @@ Puedes ajustar el tamaño del modelo según los recursos disponibles de tu equip
 
 ## 6. Requisitos y Puesta en Marcha
 
-### Prerrequisitos
+### Opción A: Despliegue en 1 Comando con Docker (Recomendado)
+
+El sistema incluye una configuración optimizada con **Multi-Stage Build** y **FFmpeg preinstalado**, listo para levantar sin requerir dependencias locales:
+
+```bash
+# 1. Configurar credenciales en .env
+cp .env.example .env
+# Edita .env y coloca tu GEMINI_API_KEY (o déjalo en blanco para modo 100% local)
+
+# 2. Compilar y levantar con Docker Compose
+docker compose up --build -d
+
+# En Windows también puedes hacer doble clic en: start.bat
+```
+
+Para monitorear los logs del contenedor en vivo:
+```bash
+docker compose logs -f nejoyt
+```
+
+Para detener el servicio:
+```bash
+docker compose down
+```
+
+---
+
+### Opción B: Ejecución Local Nativa con `uv`
+
+#### Prerrequisitos
 - Python 3.12+
-- [uv](https://github.com/astral-sh/uv) (gestor de paquetes y entornos)
+- [uv](https://github.com/astral-sh/uv) (gestor de dependencias ultrarrápido)
 - FFmpeg instalado en el sistema (detectado automáticamente en Windows / Linux / macOS)
 - Opcional: GPU NVIDIA/AMD/Apple Silicon para aceleración local, o API Key de Google AI Studio para modo Cloud.
 
-### Instalación
+#### Instalación y Ejecución
 
 ```bash
-# 1. Clonar el repositorio
-git clone https://github.com/tu-usuario/nejoyt.git
-cd nejoyt
-
-# 2. Instalar dependencias con uv
+# 1. Instalar dependencias del lockfile con uv
 uv sync
 
-# 3. Configurar variables de entorno (solo si usas el backend Cloud)
+# 2. Configurar variables de entorno
 cp .env.example .env
 ```
 
 Configura tu `.env`:
 ```env
-GEMINI_API_KEY="AIzaSy..."  # Opcional si operas en modo 100% local
+GEMINI_API_KEY="tu_api_key_aqui"  # Opcional si operas en modo 100% local
 GEMINI_LIVE_MODEL="gemini-3.5-transcribe-live"
-GEMINI_TRANSLATE_MODEL="gemini-2.5-flash"
+GEMINI_TRANSLATE_MODEL="gemini-3.5-flash-lite"
 ADMIN_TOKEN="nerdearla2026"
 LOG_LEVEL="INFO"
+PORT=8000
 ```
 
-### Ejecutar el Servidor
+#### Ejecutar el Servidor
 
 ```bash
-uv run uvicorn main:app --reload --port 8000
+uv run uvicorn main:app --port 8000
 ```
 
 El sistema estará disponible en:
 - **Portal de Audiencia:** [http://localhost:8000/](http://localhost:8000/)
 - **Centro de Control / Operador:** [http://localhost:8000/admin](http://localhost:8000/admin)
+- **Comprobación de Salud (Healthcheck):** [http://localhost:8000/health](http://localhost:8000/health)
 - **Documentación API Swagger:** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
@@ -189,7 +216,7 @@ El repositorio incluye muestras de audio en la carpeta `samples/` listas para pr
 ## 8. Operación en Vivo: Micrófono y Streaming RTMP
 
 ### Uso con Micrófono de la Sala
-1. En `/admin`, haz clic en **🎙 Detectar Micrófonos**. El sistema consultará los dispositivos DirectShow (Windows) o Pulse/ALSA (Linux).
+1. En `/admin`, haz clic en **Detectar Micrófonos**. El sistema consultará los dispositivos DirectShow (Windows) o Pulse/ALSA (Linux).
 2. Haz clic en **+ Nueva Sala**, selecciona tipo **Micrófono**, y elige el dispositivo detectado.
 3. Al iniciar la sala, el audio del micrófono se procesará en tiempo real en tu GPU o CPU local.
 

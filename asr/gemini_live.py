@@ -42,8 +42,7 @@ class GeminiLiveASR(ASRBackend):
             response_modalities=["TEXT"],
             input_audio_transcription=types.AudioTranscriptionConfig(
                 language_codes=lang_codes,
-                custom_vocabulary=self.custom_vocabulary,
-                mode="SMART"
+                custom_vocabulary=self.custom_vocabulary
             )
         )
 
@@ -136,7 +135,7 @@ class GeminiLiveASR(ASRBackend):
 
             try:
                 await session.send_realtime_input(
-                    audio=types.Blob(
+                    media=types.Blob(
                         data=chunk,
                         mime_type="audio/pcm;rate=16000"
                     )
@@ -155,25 +154,29 @@ class GeminiLiveASR(ASRBackend):
 
                 # 1. Hipótesis parcial interina (baja latencia)
                 if server_content.interim_input_transcription:
-                    text = server_content.interim_input_transcription.text
+                    trans = server_content.interim_input_transcription
+                    text = trans.text
+                    lang = getattr(trans, "language_code", None) or self.language
                     if text and text.strip():
                         event = ASRTranscriptionEvent(
                             event_type="interim",
                             text=text.strip(),
                             is_final=False,
-                            language=self.language
+                            language=lang
                         )
                         await self._event_queue.put(event)
 
                 # 2. Transcripción autoritativa final al terminar la frase
                 if server_content.input_transcription:
-                    text = server_content.input_transcription.text
+                    trans = server_content.input_transcription
+                    text = trans.text
+                    lang = getattr(trans, "language_code", None) or self.language
                     if text and text.strip():
                         event = ASRTranscriptionEvent(
                             event_type="final",
                             text=text.strip(),
                             is_final=True,
-                            language=self.language
+                            language=lang
                         )
                         await self._event_queue.put(event)
         except asyncio.CancelledError:

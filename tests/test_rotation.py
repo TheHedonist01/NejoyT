@@ -24,7 +24,7 @@ async def main():
         rotation_threshold_sec=5.0   # Conmuta tras 5 segundos
     )
     
-    audio_source = AudioSource(kind=SourceKind.FILE, source_uri="samples/speech_sample.wav", loop=False)
+    audio_source = AudioSource(kind=SourceKind.FILE, source_uri="samples/Nicolás Wolovick Sample -SOLO.mp4", loop=False)
     
     await rotation_asr.start()
     

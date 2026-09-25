@@ -1,29 +1,77 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NejoyT Admin — Centro de Control Nerdearla 2026</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap"
+    rel="stylesheet">
   <style>
+    /* DESIGN TOKENS (Heavy Industrial Utility Meets Modern Cyber-Console) */
     :root {
-      --bg-dark: #0a0d14;
-      --bg-card: #121722;
-      --bg-card-hover: #171e2c;
-      --bg-card-alt: #1a2232;
-      --border-color: #232c3f;
-      --primary: #00d2ff;
-      --primary-gradient: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
-      --accent: #ff007f;
-      --success: #00e676;
-      --warning: #ffab00;
-      --danger: #ff5252;
-      --text-main: #f0f4fc;
-      --text-muted: #8d9bb0;
-      --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+      /* 4px Spacing Scale */
+      --sp-1: 4px;
+      --sp-2: 8px;
+      --sp-3: 12px;
+      --sp-4: 16px;
+      --sp-5: 20px;
+      --sp-6: 24px;
+      --sp-8: 32px;
+      --sp-12: 48px;
+
+      /* Typography */
+      --font-display: 'Outfit', 'Space Grotesk', system-ui, sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+
+      /* 60/30/10 Color Hierarchy */
+      --bg-base: #0c0f17;
+      --bg-surface: rgba(18, 23, 36, 0.85);
+      --bg-surface-elevated: rgba(24, 31, 48, 0.95);
+      --bg-inner: rgba(11, 14, 22, 0.9);
+
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-medium: rgba(255, 255, 255, 0.14);
+      --border-active: rgba(255, 111, 32, 0.45);
+
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+
+      /* Official Nerdearla Brand Accents */
+      --nerd-red: #fe323c;
+      --nerd-yellow: #feb400;
+      --nerd-cyan: #00cbd5;
+
+      --accent: #fe323c;
+      --accent-hover: #ff4d56;
+      --accent-glow: rgba(254, 50, 60, 0.32);
+      --accent-soft: rgba(254, 50, 60, 0.14);
+
+      --accent-blue: #00cbd5;
+      --accent-blue-soft: rgba(0, 203, 213, 0.14);
+
+      /* Semantic Status Colors */
+      --status-live: #10b981;
+      --status-live-bg: rgba(16, 185, 129, 0.14);
+      --status-warn: #f59e0b;
+      --status-warn-bg: rgba(245, 158, 11, 0.14);
+      --status-danger: #ef4444;
+      --status-danger-bg: rgba(239, 68, 68, 0.14);
+      --status-cloud: #818cf8;
+      --status-cloud-bg: rgba(129, 140, 248, 0.14);
+
+      /* Border Radii */
+      --radius-xs: 4px;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-pill: 9999px;
+
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      --dur: 180ms;
     }
 
     * {
@@ -33,271 +81,352 @@
     }
 
     body {
-      background-color: var(--bg-dark);
+      background-color: var(--bg-base);
+      background-image:
+        radial-gradient(circle at 15% 0%, rgba(255, 111, 32, 0.1) 0%, transparent 45%),
+        radial-gradient(circle at 85% 0%, rgba(56, 189, 248, 0.08) 0%, transparent 45%),
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
       color: var(--text-main);
-      font-family: var(--font-sans);
+      font-family: var(--font-display);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* Header */
+    /* WCAG 2.2 AA Focus Visibility */
+    *:focus-visible {
+      outline: 2px solid var(--accent) !important;
+      outline-offset: 3px !important;
+    }
+
+    /* HEADER */
     header {
-      background: rgba(18, 23, 34, 0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border-color);
-      padding: 1rem 2rem;
+      background: rgba(15, 19, 30, 0.88);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: var(--sp-3) var(--sp-8);
       position: sticky;
       top: 0;
       z-index: 100;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 1rem;
+      gap: var(--sp-4);
+      min-height: 66px;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: var(--sp-3);
     }
 
     .brand-logo {
       width: 38px;
       height: 38px;
-      background: var(--primary-gradient);
-      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent) 0%, #e65a0f 100%);
+      border-radius: var(--radius-sm);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
+      font-weight: 800;
+      font-family: var(--font-mono);
       font-size: 1.25rem;
-      color: #000;
-      box-shadow: 0 0 16px rgba(0, 210, 255, 0.4);
+      color: #0c0f17;
+      box-shadow: 0 0 16px var(--accent-glow);
     }
 
     .brand-title h1 {
-      font-size: 1.25rem;
+      font-size: 1.15rem;
       font-weight: 700;
       letter-spacing: -0.02em;
+      line-height: 1.2;
     }
 
     .brand-title span {
-      font-size: 0.75rem;
-      color: var(--primary);
+      font-size: 0.72rem;
+      color: var(--accent);
+      font-family: var(--font-mono);
       text-transform: uppercase;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.08em;
       font-weight: 600;
+      display: block;
     }
 
     .header-controls {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: var(--sp-3);
     }
 
-    .token-box {
-      display: flex;
-      align-items: center;
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 0.25rem 0.5rem;
-      gap: 0.5rem;
-    }
-
-    .token-box label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
+    .btn-portal {
       font-family: var(--font-mono);
-    }
-
-    .token-box input {
-      background: transparent;
-      border: none;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: var(--sp-2) var(--sp-4);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
       color: var(--text-main);
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      width: 140px;
-      outline: none;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-2);
+      transition: all var(--dur) var(--ease);
     }
 
-    /* Main Container */
+    .btn-portal:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--border-medium);
+      transform: translateY(-1px);
+    }
+
+    /* MAIN CONTAINER */
     main {
       flex: 1;
-      padding: 2rem;
-      max-width: 1400px;
+      padding: var(--sp-6) var(--sp-8);
+      max-width: 1480px;
       margin: 0 auto;
       width: 100%;
     }
 
-    /* Stats Grid */
+    /* STATS RIBBON (Intentional Violation of Hick's Law: High-Density Telemetry Exposed) */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1.25rem;
-      margin-bottom: 2rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: var(--sp-4);
+      margin-bottom: var(--sp-6);
     }
 
     .stat-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 1.25rem;
+      background: var(--bg-surface);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: var(--sp-4) var(--sp-5);
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 3px;
       position: relative;
       overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      transition: border-color var(--dur) var(--ease);
     }
 
-    .stat-card::after {
+    .stat-card:hover {
+      border-color: var(--border-medium);
+    }
+
+    .stat-card::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
-      width: 4px;
+      width: 3px;
       height: 100%;
-      background: var(--primary-gradient);
+      background: var(--accent);
+    }
+
+    .stat-card.stat-blue::before {
+      background: var(--accent-blue);
+    }
+
+    .stat-card.stat-green::before {
+      background: var(--status-live);
+    }
+
+    .stat-card.stat-purple::before {
+      background: var(--status-cloud);
     }
 
     .stat-title {
-      font-size: 0.8rem;
-      color: var(--text-muted);
+      font-size: 0.72rem;
+      color: var(--text-dim);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      font-family: var(--font-mono);
+      letter-spacing: 0.08em;
+      font-weight: 700;
     }
 
     .stat-value {
-      font-size: 1.8rem;
-      font-weight: 700;
+      font-size: 1.55rem;
+      font-weight: 800;
       font-family: var(--font-mono);
       color: var(--text-main);
+      line-height: 1.25;
     }
 
     .stat-sub {
       font-size: 0.75rem;
-      color: var(--primary);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
     }
 
-    /* Section Bar */
+    /* SECTION BAR */
     .section-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1.25rem;
-      gap: 1rem;
+      margin-bottom: var(--sp-4);
+      gap: var(--sp-4);
       flex-wrap: wrap;
     }
 
     .section-title {
-      font-size: 1.2rem;
-      font-weight: 600;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: var(--sp-3);
     }
 
+    /* BUTTONS SYSTEM */
     .btn {
-      padding: 0.6rem 1.2rem;
-      border-radius: 8px;
+      padding: var(--sp-2) var(--sp-4);
+      border-radius: var(--radius-sm);
       font-weight: 600;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       cursor: pointer;
-      border: none;
+      border: 1px solid transparent;
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      transition: all 0.2s ease;
-      font-family: var(--font-sans);
+      justify-content: center;
+      gap: var(--sp-2);
+      transition: all var(--dur) var(--ease);
+      font-family: var(--font-display);
       text-decoration: none;
+      min-height: 38px;
     }
 
     .btn-primary {
-      background: var(--primary-gradient);
-      color: #000;
-      box-shadow: 0 4px 12px rgba(0, 210, 255, 0.25);
+      background: linear-gradient(135deg, var(--accent) 0%, #e65a0f 100%);
+      color: #0c0f17;
+      font-weight: 700;
+      box-shadow: 0 2px 12px var(--accent-glow);
     }
 
     .btn-primary:hover {
-      box-shadow: 0 4px 18px rgba(0, 210, 255, 0.4);
+      background: linear-gradient(135deg, var(--accent-hover) 0%, var(--accent) 100%);
+      box-shadow: 0 4px 18px rgba(255, 111, 32, 0.45);
       transform: translateY(-1px);
     }
 
     .btn-outline {
-      background: transparent;
-      border: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.03);
+      border-color: var(--border-subtle);
       color: var(--text-main);
     }
 
     .btn-outline:hover {
-      border-color: var(--primary);
-      background: rgba(0, 210, 255, 0.05);
+      border-color: var(--border-highlight);
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(-1px);
     }
 
     .btn-sm {
-      padding: 0.4rem 0.75rem;
-      font-size: 0.8rem;
-      border-radius: 6px;
+      padding: var(--sp-1) var(--sp-3);
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      min-height: 32px;
     }
 
     .btn-success {
-      background: rgba(0, 230, 118, 0.15);
-      border: 1px solid rgba(0, 230, 118, 0.4);
-      color: var(--success);
+      background: var(--status-live-bg);
+      border-color: rgba(16, 185, 129, 0.35);
+      color: var(--status-live);
     }
+
     .btn-success:hover {
-      background: rgba(0, 230, 118, 0.25);
+      background: rgba(16, 185, 129, 0.25);
+      border-color: var(--status-live);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
     }
 
     .btn-danger {
-      background: rgba(255, 82, 82, 0.15);
-      border: 1px solid rgba(255, 82, 82, 0.4);
-      color: var(--danger);
-    }
-    .btn-danger:hover {
-      background: rgba(255, 82, 82, 0.25);
+      background: var(--status-danger-bg);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: var(--status-danger);
     }
 
-    /* Rooms Table / Grid */
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: var(--status-danger);
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
+    }
+
+    /* ROOM CARDS (Exposed 4-Column Utility Grid) */
     .rooms-container {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: var(--sp-3);
     }
 
     .room-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 1.5rem;
+      background: var(--bg-surface);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: var(--sp-4) var(--sp-5);
       display: grid;
       grid-template-columns: 2.2fr 2.4fr 1.3fr 2.1fr;
       align-items: center;
-      gap: 1.25rem;
-      transition: border-color 0.2s;
+      gap: var(--sp-4);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      transition: all var(--dur) var(--ease);
+      position: relative;
     }
 
     .room-card:hover {
-      border-color: #34425d;
+      border-color: var(--border-medium);
+      background: var(--bg-surface-elevated);
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
     }
 
+    .room-info h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 2px;
+      letter-spacing: -0.015em;
+    }
+
+    .room-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+    }
+
+    .room-uri {
+      max-width: 250px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--accent);
+    }
+
+    /* High-Density Pipeline Control Box */
     .room-lang-pipeline {
-      background: rgba(10, 13, 20, 0.75);
-      border: 1px solid rgba(35, 44, 63, 0.9);
-      border-radius: 10px;
-      padding: 0.65rem 0.85rem;
+      background: var(--bg-inner);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xs);
+      padding: var(--sp-2) var(--sp-3);
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 6px;
     }
 
     .lang-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.5rem;
+      gap: var(--sp-2);
     }
 
     .lang-label {
@@ -305,135 +434,141 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
       white-space: nowrap;
     }
 
     .lang-select-sm {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
       color: var(--text-main);
-      border-radius: 6px;
-      padding: 0.25rem 0.5rem;
-      font-size: 0.8rem;
-      font-family: var(--font-sans);
-      outline: none;
-      cursor: pointer;
-      transition: all 0.2s;
-      width: 140px;
-    }
-
-    .lang-select-sm:hover, .lang-select-sm:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 8px rgba(0, 210, 255, 0.25);
-    }
-
-    .room-info h3 {
-      font-size: 1.15rem;
-      font-weight: 600;
-      margin-bottom: 0.25rem;
-    }
-
-    .room-meta {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.85rem;
-      color: var(--text-muted);
+      border-radius: var(--radius-xs);
+      padding: 3px var(--sp-2);
+      font-size: 0.78rem;
       font-family: var(--font-mono);
+      cursor: pointer;
+      width: 140px;
+      min-height: 28px;
+      transition: border-color var(--dur) var(--ease);
     }
 
-    .room-uri {
-      max-width: 280px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      color: var(--primary);
+    .lang-select-sm:hover,
+    .lang-select-sm:focus {
+      border-color: var(--accent);
     }
 
-    /* Badges */
+    /* BADGES (Multi-Channel Indicators) */
     .badge {
       display: inline-flex;
       align-items: center;
-      gap: 0.35rem;
-      padding: 0.25rem 0.6rem;
-      border-radius: 20px;
-      font-size: 0.75rem;
+      gap: 5px;
+      padding: 3px var(--sp-2);
+      border-radius: var(--radius-pill);
+      font-size: 0.72rem;
       font-weight: 700;
       text-transform: uppercase;
+      font-family: var(--font-mono);
       letter-spacing: 0.05em;
     }
 
     .badge-active {
-      background: rgba(0, 230, 118, 0.15);
-      color: var(--success);
-      border: 1px solid rgba(0, 230, 118, 0.3);
+      background: var(--status-live-bg);
+      color: var(--status-live);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
     }
 
-    .badge-active::before {
-      content: '';
-      width: 7px;
-      height: 7px;
-      background: var(--success);
+    .badge-radar-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--status-live);
       border-radius: 50%;
-      box-shadow: 0 0 8px var(--success);
-      animation: pulse 1.5s infinite;
+      box-shadow: 0 0 6px var(--status-live);
+      animation: pulse-dot 1.8s infinite;
     }
 
-    .badge-starting {
-      background: rgba(255, 171, 0, 0.15);
-      color: var(--warning);
-      border: 1px solid rgba(255, 171, 0, 0.3);
-    }
-
+    .badge-starting,
     .badge-degraded {
-      background: rgba(255, 171, 0, 0.15);
-      color: var(--warning);
-      border: 1px solid rgba(255, 171, 0, 0.3);
+      background: var(--status-warn-bg);
+      color: var(--status-warn);
+      border: 1px solid rgba(245, 158, 11, 0.35);
     }
 
     .badge-stopped {
-      background: rgba(141, 155, 176, 0.1);
-      color: var(--text-muted);
-      border: 1px solid var(--border-color);
+      background: rgba(148, 163, 184, 0.08);
+      color: var(--text-dim);
+      border: 1px solid var(--border-subtle);
     }
 
     .badge-error {
-      background: rgba(255, 82, 82, 0.15);
-      color: var(--danger);
-      border: 1px solid rgba(255, 82, 82, 0.3);
+      background: var(--status-danger-bg);
+      color: var(--status-danger);
+      border: 1px solid rgba(239, 68, 68, 0.35);
     }
 
-    @keyframes pulse {
-      0% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
-      100% { opacity: 1; transform: scale(1); }
+    .badge-backend-local {
+      background: var(--accent-blue-soft);
+      color: var(--accent-blue);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+
+    .badge-backend-cloud {
+      background: var(--status-cloud-bg);
+      color: var(--status-cloud);
+      border: 1px solid rgba(129, 140, 248, 0.35);
     }
 
     .room-metrics {
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
-      font-size: 0.85rem;
-      color: var(--text-muted);
+      gap: 3px;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
     }
 
     .room-metrics strong {
       color: var(--text-main);
-      font-family: var(--font-mono);
     }
 
     .room-actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: 5px;
       justify-content: flex-end;
     }
 
-    /* Modal */
+    /* SKELETON LOADERS (Exact Dimensions, No CLS) */
+    .skeleton-room-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: var(--sp-4) var(--sp-5);
+      display: grid;
+      grid-template-columns: 2.2fr 2.4fr 1.3fr 2.1fr;
+      align-items: center;
+      gap: var(--sp-4);
+    }
+
+    .skeleton-shimmer {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.02) 25%, rgba(255, 255, 255, 0.07) 50%, rgba(255, 255, 255, 0.02) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.8s infinite linear;
+      border-radius: var(--radius-xs);
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: 200% 0;
+      }
+
+      100% {
+        background-position: -200% 0;
+      }
+    }
+
+    /* MODAL SYSTEM (Frosted Glass Overlay Tier) */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -441,159 +576,144 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(6px);
+      background: rgba(8, 11, 18, 0.85);
+      backdrop-filter: blur(14px);
       z-index: 1000;
       align-items: center;
       justify-content: center;
-      padding: 1rem;
+      padding: var(--sp-4);
     }
 
     .modal-overlay.open {
       display: flex;
     }
 
+    #devicesModal {
+      z-index: 1200;
+    }
+
     .modal {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 1.75rem;
+      background: rgba(18, 23, 36, 0.98);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: var(--sp-6);
       width: 100%;
-      max-width: 620px;
+      max-width: 640px;
       max-height: 90vh;
       overflow-y: auto;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
       scrollbar-width: thin;
-      scrollbar-color: var(--primary) var(--bg-dark);
-    }
-
-    .modal::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .modal::-webkit-scrollbar-thumb {
-      background: rgba(0, 210, 255, 0.4);
-      border-radius: 4px;
+      scrollbar-color: var(--accent) var(--bg-base);
     }
 
     .modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1.5rem;
+      margin-bottom: var(--sp-5);
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: var(--sp-3);
     }
 
     .modal-header h2 {
-      font-size: 1.3rem;
+      font-size: 1.25rem;
       font-weight: 700;
     }
 
     .modal-close {
       background: transparent;
       border: none;
-      color: var(--text-muted);
+      color: var(--text-dim);
       font-size: 1.5rem;
       cursor: pointer;
+      line-height: 1;
+      padding: var(--sp-1);
+    }
+
+    .modal-close:hover {
+      color: var(--text-main);
     }
 
     .form-group {
-      margin-bottom: 1.25rem;
+      margin-bottom: var(--sp-4);
     }
 
     .form-group label {
       display: block;
-      margin-bottom: 0.4rem;
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      font-weight: 500;
+      margin-bottom: var(--sp-1);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
     }
 
     .form-control {
       width: 100%;
-      background: var(--bg-dark);
-      border: 1px solid var(--border-color);
+      background: var(--bg-inner);
+      border: 1px solid var(--border-subtle);
       color: var(--text-main);
-      padding: 0.6rem 0.8rem;
-      border-radius: 8px;
-      font-family: var(--font-sans);
+      padding: var(--sp-2) var(--sp-3);
+      border-radius: var(--radius-xs);
+      font-family: var(--font-display);
       font-size: 0.9rem;
-      outline: none;
+      min-height: 38px;
+      transition: border-color var(--dur) var(--ease);
     }
 
     .form-control:focus {
-      border-color: var(--primary);
+      border-color: var(--accent);
     }
 
     .source-options {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
-      gap: 0.5rem;
-      margin-bottom: 0.75rem;
+      gap: var(--sp-2);
+      margin-bottom: var(--sp-3);
     }
 
     .source-option {
-      background: var(--bg-dark);
-      border: 1px solid var(--border-color);
-      padding: 0.6rem;
-      border-radius: 8px;
+      background: var(--bg-inner);
+      border: 1px solid var(--border-subtle);
+      padding: var(--sp-2);
+      border-radius: var(--radius-xs);
       text-align: center;
       cursor: pointer;
-      font-size: 0.85rem;
-      transition: all 0.2s;
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      transition: all var(--dur) var(--ease);
     }
 
     .source-option.selected {
-      border-color: var(--primary);
-      background: rgba(0, 210, 255, 0.1);
-      color: var(--primary);
-      font-weight: 600;
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
     }
 
     .form-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1rem;
+      gap: var(--sp-4);
     }
 
-    .tag-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-      margin-top: 0.5rem;
-    }
-
-    .tag {
-      background: var(--bg-card-alt);
-      border: 1px solid var(--border-color);
-      padding: 0.2rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      font-family: var(--font-mono);
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-    }
-
-    .tag-remove {
-      cursor: pointer;
-      color: var(--danger);
-    }
-
-    /* Toast Notification */
+    /* TOAST */
     #toast {
       position: fixed;
-      bottom: 2rem;
-      right: 2rem;
-      padding: 0.8rem 1.4rem;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      bottom: var(--sp-6);
+      right: var(--sp-6);
+      padding: var(--sp-3) var(--sp-5);
+      border-radius: var(--radius-sm);
+      font-size: 0.84rem;
+      font-family: var(--font-mono);
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-medium);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
       z-index: 2000;
       opacity: 0;
-      transform: translateY(20px);
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      transform: translateY(12px);
+      transition: all var(--dur) var(--ease);
       pointer-events: none;
     }
 
@@ -603,12 +723,82 @@
       pointer-events: auto;
     }
 
-    /* Media queries para responsividad fluida en cualquier resolución de ventana */
+    /* LOGIN GATE */
+    .login-gate {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: var(--bg-base);
+      background-image: radial-gradient(circle at 50% 20%, rgba(255, 111, 32, 0.12) 0%, transparent 60%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: var(--sp-4);
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--bg-surface);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: var(--sp-8);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+    }
+
+    .login-logo {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--accent) 0%, #e65a0f 100%);
+      color: #0c0f17;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      font-size: 1.4rem;
+      margin-bottom: var(--sp-4);
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    .login-card h2 {
+      font-size: 1.35rem;
+      margin-bottom: var(--sp-2);
+      font-weight: 700;
+    }
+
+    .login-card p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+      margin-bottom: var(--sp-6);
+    }
+
+    .login-error {
+      background: var(--status-danger-bg);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: var(--status-danger);
+      padding: var(--sp-2) var(--sp-3);
+      border-radius: var(--radius-xs);
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      margin-bottom: var(--sp-4);
+    }
+
+    /* RESPONSIVE LAYOUTS */
     @media (max-width: 1200px) {
-      .room-card {
+
+      .room-card,
+      .skeleton-room-card {
         grid-template-columns: 1fr 1fr;
-        gap: 1.25rem;
+        gap: var(--sp-4);
       }
+
       .room-actions {
         justify-content: flex-start;
       }
@@ -618,133 +808,233 @@
       header {
         flex-direction: column;
         align-items: stretch;
-        padding: 0.85rem 1.25rem;
-        gap: 0.75rem;
+        padding: var(--sp-3) var(--sp-4);
+        gap: var(--sp-3);
       }
+
       .header-controls {
         justify-content: space-between;
-        flex-wrap: wrap;
       }
-      .token-box {
-        flex: 1;
-      }
-      .token-box input {
-        width: 100%;
-      }
+
       main {
-        padding: 1rem;
+        padding: var(--sp-4);
       }
+
       .stats-grid {
         grid-template-columns: 1fr;
-        gap: 0.75rem;
       }
+
       .section-bar {
         flex-direction: column;
         align-items: stretch;
-        gap: 0.75rem;
       }
-      .section-bar > div:last-child {
+
+      .section-bar>div:last-child {
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: var(--sp-2);
       }
+
       .section-bar .btn {
         width: 100%;
-        justify-content: center;
       }
-      .room-card {
+
+      .room-card,
+      .skeleton-room-card {
         grid-template-columns: 1fr;
-        padding: 1.1rem;
-        gap: 0.9rem;
+        gap: var(--sp-3);
       }
+
       .room-actions {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 0.5rem;
+        gap: var(--sp-2);
         width: 100%;
       }
-      .room-actions .btn {
-        justify-content: center;
-      }
+
       .modal {
-        padding: 1.25rem;
-        max-height: 92vh;
-        border-radius: 12px;
+        padding: var(--sp-4);
       }
+
       .form-row {
         grid-template-columns: 1fr;
-        gap: 0.75rem;
       }
+
       .source-options {
         grid-template-columns: 1fr;
-        gap: 0.4rem;
+      }
+    }
+
+    /* REDUCED MOTION (WCAG 2.2 AA) */
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      ::before,
+      ::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
       }
     }
   </style>
 </head>
+
 <body>
 
-  <header>
-    <div class="brand">
-      <div class="brand-logo">N</div>
-      <div class="brand-title">
-        <h1>NejoyT Control Hub</h1>
-        <span>Nerdearla 2026 — Live Subtitling & Translation</span>
-      </div>
-    </div>
-    <div class="header-controls">
-      <div class="token-box">
-        <label for="adminToken">Admin Token</label>
-        <input type="password" id="adminToken" placeholder="Token..." value="nerdearla2026">
-      </div>
-      <a href="/" class="btn btn-outline btn-sm">Portal Audiencia</a>
-    </div>
-  </header>
+  <!-- Login Gate Screen -->
+  <div id="loginGate" class="login-gate">
+    <div class="login-card">
+      <img src="/img/NERDEARLA_logo.svg" alt="Nerdearla"
+        style="height: 38px; width: auto; max-width: 240px; margin-bottom: var(--sp-4);" />
+      <h2>Acceso de Operador</h2>
+      <p>Ingresa la contraseña de administración para gestionar el pipeline y configurar salas en vivo.</p>
 
-  <main>
-    <!-- Telemetry Cards -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <span class="stat-title">Salas Activas</span>
-        <div class="stat-value" id="statActive">0 / 0</div>
-        <span class="stat-sub" id="statUptime">Orquestador en línea</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-title">Motor ASR Local (Hardware)</span>
-        <div class="stat-value" id="statHardware" style="font-size: 1.15rem; color: var(--primary);">Detectando hardware...</div>
-        <span class="stat-sub" id="statHardwareSub">Auto-detección agnóstica (CUDA/ROCm/MPS/CPU)</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-title">Motor ASR Cloud</span>
-        <div class="stat-value" style="font-size: 1.15rem; color: #a370f7;">gemini-3.5-transcribe-live</div>
-        <span class="stat-sub">Streaming WebSocket con rotación continua</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-title">Audiencia Conectada</span>
-        <div class="stat-value" id="statAudience">0</div>
-        <span class="stat-sub">WebSockets activos</span>
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+        <div class="form-group">
+          <label for="loginPasswordInput">Contraseña de Administración</label>
+          <div style="display: flex; gap: var(--sp-2);">
+            <input type="password" id="loginPasswordInput" class="form-control" placeholder="Escribe tu contraseña..."
+              required autofocus>
+            <button type="button" class="btn btn-outline btn-sm" id="btnToggleLoginPass"
+              onclick="toggleLoginPassword()">Ver</button>
+          </div>
+        </div>
+        <div id="loginErrorMsg" class="login-error" style="display: none;"></div>
+        <button type="submit" class="btn btn-primary" id="btnLoginSubmit"
+          style="width: 100%; justify-content: center; min-height: 44px;">
+          Ingresar al Panel
+        </button>
+      </form>
+      <div
+        style="margin-top: var(--sp-6); padding-top: var(--sp-4); border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--text-dim); font-family: var(--font-mono);">
+        <span>NejoyT · Nerdearla 2026</span>
+        <a href="/" style="color: var(--accent); text-decoration: none;">Portal Audiencia</a>
       </div>
     </div>
+  </div>
 
-    <!-- Section Bar -->
-    <div class="section-bar">
-      <div class="section-title">
-        <span>Salas de Conferencia</span>
-        <span class="badge badge-active" id="syncStatus">Auto-sync 2s</span>
+  <div id="appContainer" style="display: none;">
+    <header>
+      <div class="brand">
+        <img src="/img/NeJoyT_Logo_V2.svg" alt="NejoyT" style="height: 28px; width: auto; margin-right: var(--sp-2);" />
+        <div class="brand-title">
+          <h1>NejoyT Centro de Control</h1>
+          <span>Nerdearla 2026 — Live Telemetry & Mission Hub</span>
+        </div>
       </div>
-      <div style="display: flex; gap: 0.75rem;">
-        <button class="btn btn-outline" onclick="fetchAudioDevicesModal()">🎙 Detectar Micrófonos</button>
-        <button class="btn btn-primary" onclick="openCreateModal()">+ Nueva Sala</button>
+      <div class="header-controls">
+        <div style="display: flex; align-items: center; gap: var(--sp-2);">
+          <span class="badge badge-active" style="font-size: 0.72rem;">
+            <span class="badge-radar-dot"></span>
+            <span>Operador Conectado</span>
+          </span>
+          <button class="btn btn-outline btn-sm" onclick="logoutAdmin()">Cerrar Sesión</button>
+        </div>
+        <a href="/" class="btn-portal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+          <span>Vista Audiencia</span>
+        </a>
       </div>
-    </div>
+    </header>
 
-    <!-- Rooms List -->
-    <div class="rooms-container" id="roomsList">
-      <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
-        Cargando salas del orquestador...
+    <main>
+      <!-- Telemetry Ribbon (Intentional Violation of Hick's Law: High-Density Telemetry Exposed) -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-title">Salas Operacionales</span>
+          <div class="stat-value" id="statActive">0 / 0</div>
+          <span class="stat-sub" id="statUptime">Orquestador en línea</span>
+        </div>
+        <div class="stat-card stat-blue">
+          <span class="stat-title">Motor ASR Local</span>
+          <div class="stat-value" id="statHardware" style="font-size: 1.1rem; color: var(--accent-blue);">Detectando...
+          </div>
+          <span class="stat-sub" id="statHardwareSub">Auto-detección agnóstica de hardware</span>
+        </div>
+        <div class="stat-card stat-purple">
+          <span class="stat-title">Motor ASR Cloud Live</span>
+          <div class="stat-value" id="statLiveModel" style="font-size: 1.05rem; color: var(--status-cloud); word-break: break-all;">gemini-3.5-transcribe-live</div>
+          <span class="stat-sub">Rotación continua de sesión (~9m solape)</span>
+        </div>
+        <div class="stat-card stat-purple">
+          <span class="stat-title">Motor Traducción Cloud</span>
+          <div class="stat-value" id="statTranslateModel" style="font-size: 1.05rem; color: #d946ef; word-break: break-all;">gemini-3.5-flash-lite</div>
+          <span class="stat-sub">Traducción simultánea con glosario</span>
+        </div>
+        <div class="stat-card stat-green">
+          <span class="stat-title">Ingesta PCM en Vivo</span>
+          <div class="stat-value" style="font-size: 1.1rem; color: var(--status-live);">16 kHz · 1 canal</div>
+          <span class="stat-sub">PCM s16le · 3.200 B / 100ms via FFmpeg</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-title">Audiencia Conectada</span>
+          <div class="stat-value" id="statAudience">0</div>
+          <span class="stat-sub">WebSockets activos en salas</span>
+        </div>
       </div>
-    </div>
-  </main>
+
+      <!-- Action Bar -->
+      <div class="section-bar">
+        <div class="section-title">
+          <span>Salas de Conferencia</span>
+          <span class="badge badge-active" id="syncStatus" style="font-size: 0.7rem;">Auto-sync 2s</span>
+        </div>
+        <div style="display: flex; gap: var(--sp-2); flex-wrap: wrap;">
+          <button class="btn btn-outline" onclick="openConfigModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true">
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+            <span>Configuración & API</span>
+          </button>
+          <button class="btn btn-outline" onclick="fetchAudioDevicesModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" y1="19" x2="12" y2="23" />
+              <line x1="8" y1="23" x2="16" y2="23" />
+            </svg>
+            <span>Detectar Micrófonos</span>
+          </button>
+          <button class="btn btn-primary" onclick="openCreateModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span>Nueva Sala</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Rooms Grid with Skeletons as initial placeholder -->
+      <div class="rooms-container" id="roomsList" aria-live="polite">
+        <div class="skeleton-room-card" aria-busy="true" aria-label="Cargando salas del orquestador...">
+          <div>
+            <div class="skeleton-shimmer" style="width: 180px; height: 22px; margin-bottom: 8px;"></div>
+            <div class="skeleton-shimmer" style="width: 120px; height: 16px;"></div>
+          </div>
+          <div class="skeleton-shimmer" style="height: 60px;"></div>
+          <div>
+            <div class="skeleton-shimmer" style="width: 90px; height: 16px; margin-bottom: 6px;"></div>
+            <div class="skeleton-shimmer" style="width: 110px; height: 16px;"></div>
+          </div>
+          <div style="display: flex; gap: 4px; justify-content: flex-end;">
+            <div class="skeleton-shimmer" style="width: 60px; height: 32px;"></div>
+            <div class="skeleton-shimmer" style="width: 60px; height: 32px;"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
 
   <!-- Create Room Modal -->
   <div class="modal-overlay" id="createModal">
@@ -757,11 +1047,11 @@
       <form id="createRoomForm" onsubmit="handleCreateRoom(event)">
         <div class="form-row">
           <div class="form-group">
-            <label>ID de Sala (slug)</label>
+            <label for="newRoomId">ID de Sala (slug)</label>
             <input type="text" class="form-control" id="newRoomId" placeholder="ej. sala-devops" required>
           </div>
           <div class="form-group">
-            <label>Nombre Descriptivo</label>
+            <label for="newRoomName">Nombre Descriptivo</label>
             <input type="text" class="form-control" id="newRoomName" placeholder="ej. Sala DevOps & Cloud" required>
           </div>
         </div>
@@ -769,80 +1059,135 @@
         <div class="form-group">
           <label>Motor de ASR / Inferencia</label>
           <div class="source-options" style="grid-template-columns: 1fr 1fr;">
-            <div class="source-option selected" id="backendOptLocal" onclick="selectBackend('local')">⚡ Motor Local (<span id="hwOptionLabel">Detectando...</span>)</div>
-            <div class="source-option" id="backendOptCloud" onclick="selectBackend('cloud')">☁ Google Cloud (Gemini 3.5 Live)</div>
+            <div class="source-option selected" id="backendOptLocal" onclick="selectBackend('local')">Motor Local (<span
+                id="hwOptionLabel">Detectando...</span>)</div>
+            <div class="source-option" id="backendOptCloud" onclick="selectBackend('cloud')">Google Cloud (<span id="modalCloudModelLabel">Gemini Live</span>)</div>
           </div>
         </div>
 
         <div class="form-group" id="whisperModelSizeGroup">
-          <label>Tamaño de Modelo Whisper (Local)</label>
+          <label for="newRoomWhisperSize">Tamaño de Modelo Whisper (Local)</label>
           <select class="form-control" id="newRoomWhisperSize">
             <option value="tiny">tiny (Ultra-rápido, ~39M params, ideal CPU modesta)</option>
             <option value="base" selected>base (Recomendado, ~74M params, equilibrado)</option>
             <option value="small">small (Mayor precisión, ~244M params, requiere GPU)</option>
             <option value="medium">medium (Alta precisión, ~769M params, GPU potente)</option>
           </select>
-          <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 0.35rem;">
-            Ajustable según el hardware disponible sin necesidad de modificar código.
-          </small>
         </div>
 
         <div class="form-group">
           <label>Tipo de Fuente de Audio</label>
           <div class="source-options">
-            <div class="source-option selected" data-kind="file" onclick="selectSourceKind('file')">📁 Archivo Demo</div>
-            <div class="source-option" data-kind="mic" onclick="selectSourceKind('mic')">🎙 Micrófono</div>
-            <div class="source-option" data-kind="stream" onclick="selectSourceKind('stream')">📡 Stream RTMP/HLS</div>
+            <div class="source-option selected" data-kind="file" onclick="selectSourceKind('file')">Archivo Demo</div>
+            <div class="source-option" data-kind="mic" onclick="selectSourceKind('mic')">Micrófono DirectShow</div>
+            <div class="source-option" data-kind="stream" onclick="selectSourceKind('stream')">Stream RTMP/HLS</div>
           </div>
         </div>
 
-
-        <div class="form-group">
-          <label id="sourceUriLabel">Ruta al archivo de audio</label>
-          <div style="display: flex; gap: 0.5rem;">
-            <input type="text" class="form-control" id="newRoomUri" value="samples/speech_sample.wav" required>
-            <button type="button" id="btnSelectDevice" class="btn btn-outline btn-sm" style="display:none;" onclick="loadMicDevicesIntoUri()">Dispositivos</button>
+        <!-- Fuente: Archivo Demo -->
+        <div id="fileSourceGroup" class="form-group" style="display: block;">
+          <label for="newRoomUriFile">Ruta al Archivo de Audio Local</label>
+          <div style="display: flex; gap: var(--sp-2); align-items: center;">
+            <input type="text" class="form-control" id="newRoomUriFile" value="samples/speech_sample.wav"
+              placeholder="samples/mi_audio.wav">
+            <button type="button" class="btn btn-outline btn-sm" id="btnUploadAudio" onclick="triggerAudioUpload()"
+              style="white-space: nowrap; display: flex; align-items: center; gap: 6px; border-color: rgba(254, 50, 60, 0.4); color: var(--accent); padding: 0.45rem 0.85rem; height: 38px;"
+              title="Subir archivo">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <span>Subir Archivo</span>
+            </button>
+            <input type="file" id="audioFileUploadInput"
+              accept="audio/*,video/mp4,.wav,.mp3,.m4a,.aac,.flac,.ogg,.mp4,.webm" style="display: none;"
+              onchange="handleAudioFileUpload(this)">
           </div>
-          <small id="uriHelpText" style="display:block; margin-top: 0.3rem; color: var(--text-muted); font-size: 0.75rem;">
-            Ejemplo: samples/speech_sample.wav
-          </small>
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--sp-1); flex-wrap: wrap; gap: 4px;">
+            <small style="color: var(--text-muted); font-size: 0.75rem;">
+              Formatos soportados por FFmpeg (.wav, .mp3, .m4a, .mp4, etc.)
+            </small>
+            <div id="uploadStatusText"
+              style="font-size: 0.75rem; font-family: var(--font-mono); color: var(--nerd-cyan); display: none;"></div>
+          </div>
+          <div id="existingSamplesGroup"
+            style="margin-top: var(--sp-2); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 0.74rem; color: var(--text-dim);">Audios demo listos:</span>
+            <div id="samplesBadgeList" style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <span style="font-size: 0.74rem; color: var(--text-muted);">Cargando demos...</span>
+            </div>
+          </div>
         </div>
 
-        <div style="background: rgba(0, 210, 255, 0.04); border: 1px solid rgba(0, 210, 255, 0.2); border-radius: 12px; padding: 1.1rem; margin-bottom: 1.25rem;">
-          <div style="font-size: 0.82rem; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 0.05em; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.4rem;">
-            <span>🌐 Configuración de Idiomas y Traducción Simultánea</span>
+        <!-- Fuente: Micrófono (Desplegable nativo) -->
+        <div id="micSourceGroup" class="form-group" style="display: none;">
+          <label for="newRoomMicSelect">Dispositivo de Micrófono de Entrada (DirectShow)</label>
+          <div style="display: flex; gap: var(--sp-2); align-items: center;">
+            <select class="form-control" id="newRoomMicSelect" onchange="onMicDeviceChange(this.value)">
+              <option value="">Cargando micrófonos disponibles...</option>
+            </select>
+            <button type="button" class="btn btn-outline btn-sm" onclick="reloadMicrophones(true)" id="btnRefreshMics"
+              title="Volver a escanear dispositivos DirectShow">Actualizar</button>
+          </div>
+          <div id="customMicInputGroup" style="display: none; margin-top: var(--sp-2);">
+            <input type="text" class="form-control" id="newRoomMicCustom"
+              placeholder="Nombre DirectShow o identificador @device_cm_... personalizado">
+          </div>
+          <div
+            style="background: rgba(0, 203, 213, 0.06); border: 1px solid rgba(0, 203, 213, 0.2); border-radius: var(--radius-xs); padding: var(--sp-2) var(--sp-3); margin-top: var(--sp-2); font-size: 0.76rem; color: var(--text-dim); line-height: 1.45;">
+            <strong style="color: var(--nerd-cyan);">Asignación DirectShow en Windows:</strong>
+            <ul style="margin: 4px 0 0 16px;">
+              <li><strong>Micrófono Físico:</strong> Para oradores con micrófono USB/XLR o consola de sala (ej. Realtek,
+                Shure).</li>
+              <li><strong>Captura desde OBS:</strong> Selecciona <em>OBS-Audio</em> o <em>CABLE Output (VB-Audio)</em>
+                para recibir la señal maestra de la transmisión.</li>
+              <li>Cada sala ejecuta su propio subproceso aislado de FFmpeg (16 kHz s16le mono) con reconexión automática
+                si se desenchufa.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Fuente: Stream RTMP/HLS -->
+        <div id="streamSourceGroup" class="form-group" style="display: none;">
+          <label for="newRoomUriStream">URI RTMP o HLS Entrante</label>
+          <input type="text" class="form-control" id="newRoomUriStream" value="rtmp://0.0.0.0:1935/live/stream1">
+        </div>
+
+        <div
+          style="background: var(--bg-inner); border: 1px solid var(--border-subtle); border-radius: var(--radius-xs); padding: var(--sp-4); margin-bottom: var(--sp-4);">
+          <div
+            style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--accent); letter-spacing: 0.05em; margin-bottom: var(--sp-3);">
+            <span>Configuración de Idiomas y Traducción Simultánea</span>
           </div>
 
-          <div class="form-row" style="margin-bottom: 0.85rem;">
+          <div class="form-row">
             <div class="form-group" style="margin-bottom: 0;">
-              <label style="font-weight: 600; color: #fff;">🎙 Idioma Base (Audio Hablado en Vivo)</label>
-              <select class="form-control" id="newRoomSourceLang" style="border-color: rgba(0, 210, 255, 0.4);">
-                <option value="auto" selected>✨ Auto-detectar automáticamente</option>
-                <option value="en">🇺🇸 Inglés (English)</option>
-                <option value="es">🇪🇸 Español (Hispanoamérica / España)</option>
-                <option value="pt">🇧🇷 Portugués (Português)</option>
+              <label for="newRoomSourceLang">Idioma Base (Audio Hablado en Vivo)</label>
+              <select class="form-control" id="newRoomSourceLang">
+                <option value="auto" selected>Auto-detectar automáticamente</option>
+                <option value="en">Inglés (English)</option>
+                <option value="es">Español (Hispanoamérica / España)</option>
+                <option value="pt">Portugués (Português)</option>
               </select>
-              <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 0.35rem;">
-                Idioma de la voz del orador al hablar por el micrófono o fuente.
-              </small>
             </div>
 
             <div class="form-group" style="margin-bottom: 0;">
-              <label style="font-weight: 600; color: #fff;">💬 Idioma de Subtítulos (Salida en Pantalla)</label>
-              <select class="form-control" id="newRoomTargetLang" style="border-color: rgba(0, 230, 118, 0.4);">
-                <option value="es" selected>🇪🇸 Español (Subtítulos en Español)</option>
-                <option value="en">🇺🇸 Inglés (Subtitles in English)</option>
-                <option value="pt">🇧🇷 Portugués (Legendas em Português)</option>
+              <label for="newRoomTargetLang">Idioma de Subtítulos (Salida Principal)</label>
+              <select class="form-control" id="newRoomTargetLang">
+                <option value="es" selected>Español (Subtítulos en Español)</option>
+                <option value="en">Inglés (Subtitles in English)</option>
+                <option value="pt">Portugués (Legendas em Português)</option>
               </select>
-              <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 0.35rem;">
-                Idioma en el que se proyectarán los subtítulos traducidos automáticamente.
-              </small>
             </div>
           </div>
 
-          <div style="margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px dashed var(--border-color); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-            <span style="font-size: 0.8rem; color: var(--text-muted);">Canales adicionales disponibles para audiencia:</span>
-            <div style="display: flex; gap: 1rem; font-size: 0.85rem;">
+          <div
+            style="margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px dashed var(--border-subtle); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-2);">
+            <span style="font-size: 0.75rem; color: var(--text-dim);">Canales adicionales disponibles para
+              audiencia:</span>
+            <div style="display: flex; gap: var(--sp-4); font-size: 0.85rem;">
               <label><input type="checkbox" id="langEs" checked> Español</label>
               <label><input type="checkbox" id="langEn" checked> Inglés</label>
               <label><input type="checkbox" id="langPt" checked> Portugués</label>
@@ -851,26 +1196,94 @@
         </div>
 
         <div class="form-group">
-          <label>Glosario Técnico (separado por comas)</label>
-          <input type="text" class="form-control" id="newRoomGlossary" placeholder="Kubernetes, Terraform, Docker, Nerdearla, PyTorch...">
+          <label for="newRoomGlossary">Glosario Técnico (separado por comas)</label>
+          <input type="text" class="form-control" id="newRoomGlossary"
+            placeholder="Kubernetes, Terraform, Docker, Nerdearla, PyTorch...">
         </div>
 
-        <div class="form-row" style="margin-bottom: 1.5rem; align-items: center;">
+
+        <div class="form-row" style="margin-bottom: var(--sp-5); align-items: center;">
           <div id="loopOptionGroup" style="display: block;">
-            <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.88rem;">
-              <input type="checkbox" id="newRoomLoop" checked> 🔁 Repetir archivo en bucle (loop)
+            <label style="display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; font-size: 0.88rem;">
+              <input type="checkbox" id="newRoomLoop" checked> Repetir archivo en bucle (loop)
             </label>
           </div>
           <div id="autoStartOptionGroup" style="display: block;">
-            <label style="display: flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.88rem;">
-              <input type="checkbox" id="newRoomAutoStart"> ⚡ Iniciar de inmediato
+            <label style="display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; font-size: 0.88rem;">
+              <input type="checkbox" id="newRoomAutoStart"> Iniciar de inmediato
             </label>
           </div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <div style="display: flex; justify-content: flex-end; gap: var(--sp-2);">
           <button type="button" class="btn btn-outline" onclick="closeCreateModal()">Cancelar</button>
           <button type="submit" class="btn btn-primary">Crear Sala</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Configuration & Secrets Modal -->
+  <div class="modal-overlay" id="configModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Configuración del Sistema y Claves de API</h2>
+        <button class="modal-close" onclick="closeConfigModal()">&times;</button>
+      </div>
+
+      <div
+        style="background: var(--bg-inner); border: 1px solid var(--border-subtle); border-radius: var(--radius-xs); padding: var(--sp-3); margin-bottom: var(--sp-4);">
+        <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.45;">
+          Las credenciales se almacenan de forma segura en <strong
+            style="color: var(--accent); font-family: var(--font-mono);">secrets/credentials.json</strong> (directorio
+          ignorado por Git).
+        </div>
+      </div>
+
+      <form id="configForm" onsubmit="handleSaveConfig(event)">
+        <div class="form-group">
+          <label for="cfgGeminiKey">Google Gemini API Key</label>
+          <div style="display: flex; gap: var(--sp-2);">
+            <input type="password" class="form-control" id="cfgGeminiKey" placeholder="Pegar clave de API de Google...">
+            <button type="button" class="btn btn-outline btn-sm" onclick="toggleKeyVisibility()"
+              id="btnToggleKey">Ver</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="testGeminiKey()"
+              id="btnTestKey">Probar</button>
+          </div>
+          <small id="keyStatusText"
+            style="display: block; margin-top: var(--sp-1); color: var(--text-dim); font-size: 0.75rem; font-family: var(--font-mono);">
+            Consultando estado de credenciales...
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="cfgLiveModel">Modelo Cloud ASR (Streaming en Vivo)</label>
+          <input type="text" class="form-control" id="cfgLiveModel" value="gemini-3.5-transcribe-live">
+        </div>
+
+        <div class="form-group">
+          <label for="cfgTranslateModel">Modelo de Traducción en la Nube (Fallback)</label>
+          <select class="form-control" id="cfgTranslateModel">
+            <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Recomendado: mínima latencia y cuota free tier)
+            </option>
+            <option value="gemini-3.5-flash">gemini-3.5-flash (Estándar)</option>
+            <option value="gemini-3.8-flash">gemini-3.8-flash (Máxima capacidad)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="cfgAdminToken">Contraseña de Administración (Admin Token)</label>
+          <div style="display: flex; gap: var(--sp-2);">
+            <input type="password" class="form-control" id="cfgAdminToken"
+              placeholder="Dejar en blanco para mantener la contraseña actual...">
+            <button type="button" class="btn btn-outline btn-sm" onclick="toggleAdminPassVisibility()"
+              id="btnToggleAdminPass">Ver</button>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: var(--sp-2); margin-top: var(--sp-6);">
+          <button type="button" class="btn btn-outline" onclick="closeConfigModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveConfig">Guardar Cambios</button>
         </div>
       </form>
     </div>
@@ -886,13 +1299,14 @@
 
       <div class="form-group">
         <label id="glossaryRoomTitle">Sala:</label>
-        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">
-          Los términos aquí configurados sesgan el modelo de ASR y se protegen de traducción errónea en vivo.
+        <p style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: var(--sp-3);">
+          Los términos aquí configurados sesgan el modelo ASR y se protegen de traducción errónea en vivo.
         </p>
-        <textarea id="glossaryTermsInput" class="form-control" rows="5" placeholder="Un término por línea o separados por comas..."></textarea>
+        <textarea id="glossaryTermsInput" class="form-control" rows="5"
+          placeholder="Un término por línea o separados por comas..." style="font-family: var(--font-mono);"></textarea>
       </div>
 
-      <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+      <div style="display: flex; justify-content: flex-end; gap: var(--sp-2);">
         <button type="button" class="btn btn-outline" onclick="closeGlossaryModal()">Cancelar</button>
         <button type="button" class="btn btn-primary" onclick="saveGlossaryPatch()">Aplicar Cambios</button>
       </div>
@@ -903,12 +1317,13 @@
   <div class="modal-overlay" id="devicesModal">
     <div class="modal">
       <div class="modal-header">
-        <h2>Dispositivos de Audio del Sistema</h2>
+        <h2>Dispositivos de Captura DirectShow</h2>
         <button class="modal-close" onclick="closeDevicesModal()">&times;</button>
       </div>
 
-      <div id="devicesList" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem;">
-        Cargando dispositivos...
+      <div id="devicesList"
+        style="max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-5);">
+        Cargando dispositivos de audio...
       </div>
 
       <div style="display: flex; justify-content: flex-end;">
@@ -917,7 +1332,117 @@
     </div>
   </div>
 
-  <div id="toast">Notificación</div>
+  <!-- OBS OVERLAY GENERATOR MODAL -->
+  <div class="modal-overlay" id="obsModal">
+    <div class="modal" style="max-width: 580px;">
+      <div class="modal-header">
+        <div>
+          <h2>Integración OBS Studio / Streaming</h2>
+          <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 2px;" id="obsModalSubtitle">Sala: Auditorio
+          </p>
+        </div>
+        <button class="modal-close" onclick="closeObsModal()">&times;</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: var(--sp-4); margin-bottom: var(--sp-5);">
+        <div>
+          <label class="form-label" style="margin-bottom: var(--sp-2);">Estilo visual de subtítulo:</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2);">
+            <div class="source-option selected" id="obsStyleOptBroadcast" onclick="selectObsStyle('broadcast')"
+              style="padding: var(--sp-2) var(--sp-3);">
+              <div style="font-weight: 600; font-size: 0.85rem;">Broadcast Lower-Third</div>
+              <div style="font-size: 0.72rem; color: var(--text-dim);">Streaming en vivo, barra acento</div>
+            </div>
+            <div class="source-option" id="obsStyleOptCine" onclick="selectObsStyle('cine')"
+              style="padding: var(--sp-2) var(--sp-3);">
+              <div style="font-weight: 600; font-size: 0.85rem;">Cine (Estilo Netflix)</div>
+              <div style="font-size: 0.72rem; color: var(--text-dim);">Pop-on centrado, 1-2 líneas</div>
+            </div>
+            <div class="source-option" id="obsStyleOptNoticiero" onclick="selectObsStyle('noticiero')"
+              style="padding: var(--sp-2) var(--sp-3);">
+              <div style="font-weight: 600; font-size: 0.85rem;">Noticiero (BBC Live)</div>
+              <div style="font-size: 0.72rem; color: var(--text-dim);">Roll-up 3 líneas a la izquierda</div>
+            </div>
+            <div class="source-option" id="obsStyleOptPresentacion" onclick="selectObsStyle('presentacion')"
+              style="padding: var(--sp-2) var(--sp-3);">
+              <div style="font-weight: 600; font-size: 0.85rem;">Presentación (Slide)</div>
+              <div style="font-size: 0.72rem; color: var(--text-dim);">1 línea grande en borde inferior</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);">
+          <div>
+            <label class="form-label">Idioma emitido en OBS:</label>
+            <select id="obsLangSelect" class="form-select" onchange="updateObsUrlDisplay()">
+              <option value="es" selected>Español (Traducción)</option>
+              <option value="en">Inglés (Original)</option>
+              <option value="pt">Português</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Tipografía para el Overlay:</label>
+            <select id="obsFontSelect" class="form-select" onchange="updateObsUrlDisplay()">
+              <option value="Outfit" selected>Outfit (Moderna)</option>
+              <option value="Inter">Inter (Elegante)</option>
+              <option value="Montserrat">Montserrat (Titular)</option>
+              <option value="Lexend">Lexend (Alta Lectura)</option>
+              <option value="Bebas Neue">Bebas Neue (Noticias)</option>
+              <option value="Roboto Mono">Roboto Mono (Técnica)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="form-label">URL para Browser Source (Navegador en OBS):</label>
+          <div style="display: flex; gap: var(--sp-2);">
+            <input type="text" id="obsGeneratedUrl" class="form-input" readonly
+              style="font-family: var(--font-mono); font-size: 0.8rem; background: var(--bg-inner); color: var(--text-main);" />
+            <button type="button" class="btn btn-primary" onclick="copyObsUrl()">Copiar</button>
+          </div>
+        </div>
+
+        <div
+          style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-xs); padding: var(--sp-3); font-size: 0.78rem; color: var(--text-dim); line-height: 1.5;">
+          <strong>Configuración recomendada en OBS Studio:</strong><br>
+          1. En fuentes, agregar: <em>Navegador (Browser)</em>.<br>
+          2. Pegar la URL generada arriba.<br>
+          3. Resolución recomendada: <strong>1920 × 1080</strong> (o 1280 × 720).<br>
+          4. Marcar: <em>"Apagar fuente si no está visible"</em>.<br>
+          5. Fondo transparente nativo sin necesidad de filtros ni croma.
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <a id="obsPreviewLink" href="#" target="_blank" class="btn btn-outline btn-sm">Abrir Vista Previa ↗</a>
+        <button type="button" class="btn btn-outline" onclick="closeObsModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Room Confirmation Modal (Chrome & Firefox Compatible) -->
+  <div class="modal-overlay" id="deleteConfirmModal">
+    <div class="modal" style="max-width: 440px;">
+      <div class="modal-header">
+        <h2 style="color: var(--status-danger); display: flex; align-items: center; gap: 8px;">
+          <span>🗑️ Eliminar Sala</span>
+        </h2>
+        <button type="button" class="modal-close" onclick="closeDeleteConfirmModal()">&times;</button>
+      </div>
+      <div style="margin: var(--sp-4) 0; font-size: 0.90rem; line-height: 1.5; color: var(--text-main);">
+        ¿Estás seguro de que deseas eliminar definitivamente la sala <strong id="deleteTargetRoomName" style="color: var(--accent);"></strong> (<code id="deleteTargetRoomId" style="color: var(--nerd-cyan); font-family: var(--font-mono);"></code>)?
+        <p style="margin-top: 8px; font-size: 0.78rem; color: var(--text-dim); line-height: 1.45;">
+          Esta acción cerrará sus subprocesos de audio y ASR en tiempo real y eliminará la sala de la lista.
+        </p>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: var(--sp-3);">
+        <button type="button" class="btn btn-outline" onclick="closeDeleteConfirmModal()">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="btnExecuteDeleteRoom" onclick="executeDeleteRoom()">Eliminar Definitivamente</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite">Notificación</div>
 
   <script>
     let selectedKind = 'file';
@@ -952,47 +1477,186 @@
       }
     }
 
-    function getAdminToken() {
-      const input = document.getElementById('adminToken');
-      const token = input ? input.value.trim() : 'nerdearla2026';
-      localStorage.setItem('nejoyt_admin_token', token);
-      return token;
+    async function loadCloudModelsInfo() {
+      try {
+        const res = await apiCall('/api/config/settings');
+        if (!res) return;
+        const liveEl = document.getElementById('statLiveModel');
+        const transEl = document.getElementById('statTranslateModel');
+        const modalLabel = document.getElementById('modalCloudModelLabel');
+        if (liveEl && res.gemini_live_model) liveEl.innerText = res.gemini_live_model;
+        if (transEl && res.gemini_translate_model) transEl.innerText = res.gemini_translate_model;
+        if (modalLabel && res.gemini_live_model) modalLabel.innerText = res.gemini_live_model;
+      } catch (e) {
+        console.warn('Error loading cloud models:', e);
+      }
     }
 
-    function initToken() {
-      const saved = localStorage.getItem('nejoyt_admin_token');
-      if (saved) {
-        document.getElementById('adminToken').value = saved;
+    let pollInterval = null;
+
+    function getAdminToken() {
+      return sessionStorage.getItem('nejoyt_admin_token') || localStorage.getItem('nejoyt_admin_token') || '';
+    }
+
+    function toggleLoginPassword() {
+      const inp = document.getElementById('loginPasswordInput');
+      const btn = document.getElementById('btnToggleLoginPass');
+      if (inp.type === 'password') {
+        inp.type = 'text';
+        btn.innerText = 'Ocultar';
+      } else {
+        inp.type = 'password';
+        btn.innerText = 'Ver';
       }
-      document.getElementById('adminToken').addEventListener('change', (e) => {
-        localStorage.setItem('nejoyt_admin_token', e.target.value.trim());
-      });
+    }
+
+    function toggleAdminPassVisibility() {
+      const inp = document.getElementById('cfgAdminToken');
+      const btn = document.getElementById('btnToggleAdminPass');
+      if (inp.type === 'password') {
+        inp.type = 'text';
+        btn.innerText = 'Ocultar';
+      } else {
+        inp.type = 'password';
+        btn.innerText = 'Ver';
+      }
+    }
+
+    async function verifyToken(token) {
+      if (!token) return false;
+      try {
+        const res = await fetch('/api/auth/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token })
+        });
+        return res.ok;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    async function initAuth() {
+      const savedToken = getAdminToken();
+      if (savedToken) {
+        const isValid = await verifyToken(savedToken);
+        if (isValid) {
+          unlockAdminUI(savedToken);
+          return;
+        }
+      }
+      showLoginGate();
+    }
+
+    function showLoginGate(msg = '') {
+      document.getElementById('loginGate').style.display = 'flex';
+      document.getElementById('appContainer').style.display = 'none';
+      const errBox = document.getElementById('loginErrorMsg');
+      if (msg) {
+        errBox.innerText = msg;
+        errBox.style.display = 'block';
+      } else {
+        errBox.style.display = 'none';
+      }
+      const passInp = document.getElementById('loginPasswordInput');
+      if (passInp) {
+        passInp.value = '';
+        setTimeout(() => passInp.focus(), 100);
+      }
+    }
+
+    function unlockAdminUI(token) {
+      document.getElementById('loginGate').style.display = 'none';
+      document.getElementById('appContainer').style.display = 'block';
+      loadHardwareInfo();
+      loadCloudModelsInfo();
+      loadRooms();
+      if (!pollInterval) {
+        pollInterval = setInterval(loadRooms, 2000);
+      }
+    }
+
+    async function handleLoginSubmit(e) {
+      if (e) e.preventDefault();
+      const passInput = document.getElementById('loginPasswordInput');
+      const btn = document.getElementById('btnLoginSubmit');
+      const errBox = document.getElementById('loginErrorMsg');
+      const token = passInput.value.trim();
+
+      if (!token) return;
+
+      btn.disabled = true;
+      btn.innerText = 'Verificando...';
+      errBox.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/auth/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: token })
+        });
+
+        if (res.ok) {
+          sessionStorage.setItem('nejoyt_admin_token', token);
+          localStorage.setItem('nejoyt_admin_token', token);
+          unlockAdminUI(token);
+        } else {
+          const data = await res.json().catch(() => ({}));
+          errBox.innerText = data.detail || 'Contraseña de administración incorrecta.';
+          errBox.style.display = 'block';
+          passInput.focus();
+        }
+      } catch (err) {
+        errBox.innerText = 'Error de conexión con el servidor.';
+        errBox.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Ingresar al Panel';
+      }
+    }
+
+    function logoutAdmin() {
+      sessionStorage.removeItem('nejoyt_admin_token');
+      localStorage.removeItem('nejoyt_admin_token');
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+      showLoginGate('Has cerrado sesión correctamente.');
     }
 
     function showToast(msg, isError = false) {
       const toast = document.getElementById('toast');
       toast.innerText = msg;
-      toast.style.borderColor = isError ? 'var(--danger)' : 'var(--primary)';
+      toast.style.borderColor = isError ? 'var(--status-danger)' : 'var(--accent)';
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 3500);
     }
 
     async function apiCall(endpoint, method = 'GET', body = null) {
       const token = getAdminToken();
-      const headers = {
-        'Content-Type': 'application/json',
-        'X-Admin-Token': token
-      };
+      const headers = {};
+      if (token) {
+        headers['X-Admin-Token'] = token;
+      }
+      if (body) {
+        headers['Content-Type'] = 'application/json';
+      }
+
+      // Query param token de respaldo para Chrome/Edge/Firefox
+      const separator = endpoint.includes('?') ? '&' : '?';
+      const url = token ? `${endpoint}${separator}token=${encodeURIComponent(token)}` : endpoint;
 
       try {
-        const res = await fetch(endpoint, {
+        const res = await fetch(url, {
           method,
           headers,
           body: body ? JSON.stringify(body) : null
         });
 
         if (res.status === 401) {
-          showToast('Error 401: Token de administración no válido.', true);
+          showToast('Sesión no autorizada o token inválido.', true);
+          logoutAdmin();
           return null;
         }
 
@@ -1010,32 +1674,31 @@
 
     let lastRoomsHash = '';
 
-    async function loadRooms() {
+    async function loadRooms(force = false) {
       try {
         const res = await fetch('/api/rooms');
         if (!res.ok) return;
         const data = await res.json();
-        renderRooms(data.rooms || []);
+        renderRooms(data.rooms || [], force);
       } catch (e) {
         console.error('Error polling rooms:', e);
       }
     }
 
-    function renderRooms(rooms) {
-      // Evitar interrumpir al usuario si tiene un selector de idioma desplegado
-      if (document.activeElement && (document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'INPUT')) {
+    function renderRooms(rooms, force = false) {
+      if (!force && document.activeElement && (document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'INPUT')) {
         return;
       }
       const hash = JSON.stringify(rooms);
-      if (hash === lastRoomsHash) return;
+      if (!force && hash === lastRoomsHash) return;
       lastRoomsHash = hash;
 
       const container = document.getElementById('roomsList');
       if (!rooms.length) {
         container.innerHTML = `
-          <div style="text-align: center; padding: 3rem; background: var(--bg-card); border-radius: 12px; border: 1px dashed var(--border-color);">
-            <h3>No hay salas registradas</h3>
-            <p style="color: var(--text-muted); margin-top: 0.5rem;">Crea una nueva sala para comenzar a subtitular.</p>
+          <div style="text-align: center; padding: var(--sp-8); background: var(--bg-surface); border-radius: var(--radius-sm); border: 1px dashed var(--border-subtle);">
+            <h3 style="font-size: 1.15rem; color: var(--text-main);">No hay salas registradas</h3>
+            <p style="color: var(--text-dim); margin-top: var(--sp-2); font-size: 0.88rem;">Crea una nueva sala para comenzar a subtitular.</p>
           </div>
         `;
         return;
@@ -1065,65 +1728,70 @@
           badgeLabel = 'ERROR';
         }
 
-        const sourceIcon = room.kind === 'mic' ? '🎙' : (room.kind === 'stream' ? '📡' : '📁');
-        const backendBadge = (room.backend === 'local') 
-          ? `<span class="badge" style="background: rgba(0, 210, 255, 0.15); color: #00d2ff; border: 1px solid rgba(0, 210, 255, 0.3);">⚡ LOCAL (${(room.whisper_model_size || 'base').toUpperCase()})</span>`
-          : `<span class="badge" style="background: rgba(163, 112, 247, 0.15); color: #a370f7; border: 1px solid rgba(163, 112, 247, 0.3);">☁ CLOUD GEMINI</span>`;
+        const sourceLabel = room.kind === 'mic' ? 'Mic DirectShow' : (room.kind === 'stream' ? 'Stream' : 'Archivo');
+        const backendBadge = (room.backend === 'local')
+          ? `<span class="badge badge-backend-local">LOCAL (${(room.whisper_model_size || 'base').toUpperCase()})</span>`
+          : `<span class="badge badge-backend-cloud">CLOUD GEMINI</span>`;
 
         return `
           <div class="room-card">
             <div class="room-info">
-              <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: var(--sp-2); margin-bottom: 4px; flex-wrap: wrap;">
                 <h3>${room.name}</h3>
                 ${backendBadge}
-                <span class="badge ${badgeClass}">${badgeLabel}</span>
+                <span class="badge ${badgeClass}">
+                  ${room.state === 'active' ? '<span class="badge-radar-dot"></span>' : ''}
+                  <span>${badgeLabel}</span>
+                </span>
               </div>
               <div class="room-meta">
-                <span>${sourceIcon} ${room.kind.toUpperCase()}:</span>
+                <span>${sourceLabel}:</span>
                 <span class="room-uri" title="${room.source_uri}">${room.source_uri}</span>
               </div>
             </div>
 
             <div class="room-lang-pipeline">
               <div class="lang-row">
-                <span class="lang-label">🎙 Audio Base:</span>
+                <span class="lang-label">Audio Base:</span>
                 <select class="lang-select-sm" onchange="quickUpdateSourceLang('${room.id}', this.value)" title="Idioma hablado por el orador en vivo">
-                  <option value="es" ${room.source_lang === 'es' ? 'selected' : ''}>🇪🇸 Español</option>
-                  <option value="en" ${room.source_lang === 'en' ? 'selected' : ''}>🇺🇸 Inglés</option>
-                  <option value="pt" ${room.source_lang === 'pt' ? 'selected' : ''}>🇧🇷 Portugués</option>
-                  <option value="auto" ${room.source_lang === 'auto' ? 'selected' : ''}>✨ Auto</option>
+                  <option value="es" ${room.source_lang === 'es' ? 'selected' : ''}>Español</option>
+                  <option value="en" ${room.source_lang === 'en' ? 'selected' : ''}>Inglés</option>
+                  <option value="pt" ${room.source_lang === 'pt' ? 'selected' : ''}>Portugués</option>
+                  <option value="auto" ${room.source_lang === 'auto' ? 'selected' : ''}>Auto</option>
                 </select>
               </div>
               <div class="lang-row">
-                <span class="lang-label">💬 Subtítulos:</span>
+                <span class="lang-label">Subtítulos:</span>
                 <select class="lang-select-sm" onchange="quickUpdateTargetLang('${room.id}', this.value)" title="Idioma de subtítulo en pantalla">
-                  <option value="es" ${room.target_lang === 'es' ? 'selected' : ''}>🇪🇸 Español</option>
-                  <option value="en" ${room.target_lang === 'en' ? 'selected' : ''}>🇺🇸 Inglés</option>
-                  <option value="pt" ${room.target_lang === 'pt' ? 'selected' : ''}>🇧🇷 Portugués</option>
+                  <option value="es" ${room.target_lang === 'es' ? 'selected' : ''}>Español</option>
+                  <option value="en" ${room.target_lang === 'en' ? 'selected' : ''}>Inglés</option>
+                  <option value="pt" ${room.target_lang === 'pt' ? 'selected' : ''}>Portugués</option>
                 </select>
               </div>
-              <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; justify-content: space-between; margin-top: 0.15rem;">
-                <span>Idiomas: ${(room.target_langs || []).join(', ').toUpperCase()}</span>
+              <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono); display: flex; justify-content: space-between; margin-top: 2px;">
+                <span>Canales: ${(room.target_langs || []).join(', ').toUpperCase()}</span>
                 <span>${(room.custom_vocabulary || []).length} glosario</span>
               </div>
             </div>
 
             <div class="room-metrics">
-              <div>Subtítulos: <strong>${room.subtitles_count || 0}</strong></div>
-              <div>Audiencia: <strong>${room.subscribers || 0} conectados</strong></div>
+              <div>Líneas: <strong>${room.subtitles_count || 0}</strong></div>
+              <div>Audiencia: <strong>${room.subscribers || 0}</strong></div>
               <div>Uptime: <strong>${room.uptime_seconds ? formatUptime(room.uptime_seconds) : '—'}</strong></div>
             </div>
 
             <div class="room-actions">
               ${room.is_running
-                ? `<button class="btn btn-danger btn-sm" onclick="stopRoom('${room.id}')">⏹ Detener</button>`
-                : `<button class="btn btn-success btn-sm" onclick="startRoom('${room.id}')">▶ Iniciar</button>`
-              }
-              <button class="btn btn-outline btn-sm" onclick="openGlossaryModal('${room.id}', ${JSON.stringify(room.custom_vocabulary || []).replace(/"/g, '&quot;')})">📝 Glosario</button>
-              <a href="/room/${room.id}" target="_blank" class="btn btn-outline btn-sm">🔗 Audiencia</a>
-              <a href="/room/${room.id}?overlay=1" target="_blank" class="btn btn-outline btn-sm">🎥 OBS</a>
-              <a href="/api/rooms/${room.id}/export?format=srt" class="btn btn-outline btn-sm">📥 SRT</a>
-              <button class="btn btn-outline btn-sm" style="color: var(--danger); border-color: rgba(255,82,82,0.3);" onclick="deleteRoom('${room.id}')">✕</button>
+            ? `<button class="btn btn-danger btn-sm" onclick="stopRoom('${room.id}')">Detener</button>`
+            : `<button class="btn btn-success btn-sm" onclick="startRoom('${room.id}')">Iniciar</button>`
+          }
+              <button class="btn btn-outline btn-sm" onclick="openGlossaryModal('${room.id}', ${JSON.stringify(room.custom_vocabulary || []).replace(/"/g, '&quot;')})">Glosario</button>
+              <a href="/room/${room.id}" target="_blank" class="btn btn-outline btn-sm" title="Abrir vista de audiencia">Audiencia</a>
+              <button class="btn btn-outline btn-sm" style="border-color: rgba(0, 203, 213, 0.4); color: var(--nerd-cyan);" onclick="openObsModal('${room.id}', '${room.name}')">OBS Overlay ▾</button>
+              <a href="/api/rooms/${room.id}/export?format=html" target="_blank" class="btn btn-outline btn-sm" title="Leer transcripción estructurada o imprimir PDF">Leer / PDF</a>
+              <a href="/api/rooms/${room.id}/export?format=txt" class="btn btn-outline btn-sm" title="Descargar texto continuo para IA">TXT</a>
+              <a href="/api/rooms/${room.id}/export?format=srt" class="btn btn-outline btn-sm" title="Descargar subtítulos SRT">SRT</a>
+              <button type="button" class="btn btn-outline btn-sm" style="color: var(--status-danger); border-color: rgba(239,68,68,0.3);" onclick="confirmDeleteRoom('${room.id}', '${escapeHtml(room.name || room.id).replace(/'/g, "\\'")}')">Eliminar</button>
             </div>
           </div>
         `;
@@ -1157,20 +1825,182 @@
       }
     }
 
-    async function deleteRoom(id) {
-      if (!confirm(`¿Eliminar definitivamente la sala '${id}'?`)) return;
-      const res = await apiCall(`/api/rooms/${id}`, 'DELETE');
-      if (res) {
-        showToast(`Sala '${id}' eliminada.`);
-        loadRooms();
+    let pendingDeleteRoomId = null;
+
+    function confirmDeleteRoom(id, name) {
+      pendingDeleteRoomId = id;
+      const modal = document.getElementById('deleteConfirmModal');
+      const targetName = document.getElementById('deleteTargetRoomName');
+      const targetId = document.getElementById('deleteTargetRoomId');
+      if (targetName) targetName.innerText = name || id;
+      if (targetId) targetId.innerText = id;
+      if (modal) {
+        modal.classList.add('open');
+      } else {
+        // Fallback inmediato si el modal no estuviera en DOM
+        executeDeleteRoom();
       }
     }
 
-    /* Modals */
+    function closeDeleteConfirmModal() {
+      pendingDeleteRoomId = null;
+      const modal = document.getElementById('deleteConfirmModal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    async function executeDeleteRoom() {
+      if (!pendingDeleteRoomId) return;
+      const id = pendingDeleteRoomId;
+      closeDeleteConfirmModal();
+
+      showToast(`Eliminando sala '${id}'...`);
+      lastRoomsHash = '';
+
+      const btn = document.getElementById('btnExecuteDeleteRoom');
+      if (btn) btn.disabled = true;
+
+      try {
+        let res = await apiCall(`/api/rooms/${id}`, 'DELETE');
+        if (!res) {
+          // Fallback a POST por si Chrome o el proxy bloquea DELETE
+          res = await apiCall(`/api/rooms/${id}/delete`, 'POST');
+        }
+        if (res) {
+          showToast(`Sala '${id}' eliminada con éxito.`);
+        }
+      } catch (err) {
+        showToast('Error al eliminar sala: ' + err, true);
+      } finally {
+        if (btn) btn.disabled = false;
+        lastRoomsHash = '';
+        await loadRooms(true);
+      }
+    }
+
+    // Compatibilidad directa
+    async function deleteRoom(id) {
+      confirmDeleteRoom(id, id);
+    }
+
+    /* Modals & Audio Upload */
+    function triggerAudioUpload() {
+      const input = document.getElementById('audioFileUploadInput');
+      if (input) input.click();
+    }
+
+    async function handleAudioFileUpload(input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      const statusEl = document.getElementById('uploadStatusText');
+      const btn = document.getElementById('btnUploadAudio');
+
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.style.color = 'var(--nerd-cyan)';
+        statusEl.innerText = `Subiendo ${file.name} (${(file.size / 1024).toFixed(1)} KB)...`;
+      }
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>Subiendo...</span>';
+      }
+
+      try {
+        const res = await fetch(`/api/upload/audio?filename=${encodeURIComponent(file.name)}`, {
+          method: 'POST',
+          body: file
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'ok') {
+          const fileInput = document.getElementById('newRoomUriFile');
+          if (fileInput) fileInput.value = data.file_path;
+          showToast(`Archivo '${data.filename}' subido exitosamente.`);
+          if (statusEl) {
+            statusEl.innerText = `✓ Subido con éxito: ${data.filename}`;
+            statusEl.style.color = 'var(--status-live)';
+          }
+          await loadAvailableSamples();
+        } else {
+          showToast(data.detail || 'Error al subir archivo', true);
+          if (statusEl) {
+            statusEl.innerText = 'Error al subir archivo';
+            statusEl.style.color = 'var(--status-danger)';
+          }
+        }
+      } catch (err) {
+        showToast('Error de conexión al subir audio: ' + err, true);
+        if (statusEl) {
+          statusEl.innerText = 'Error de conexión';
+          statusEl.style.color = 'var(--status-danger)';
+        }
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span>Subir Archivo...</span>`;
+        }
+        input.value = '';
+      }
+    }
+
+    /* --- SPEAKER ID MANAGEMENT (ONNX ECAPA-TDNN) --- */
+    let enrolledSpeakers = [];
+    let availableAudioSamples = [];
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function renderSpeakerRows() {}
+
+    async function loadAvailableSamples() {
+      try {
+        const res = await fetch('/api/samples');
+        if (!res.ok) return;
+        const data = await res.json();
+        availableAudioSamples = data.samples || [];
+        const listEl = document.getElementById('samplesBadgeList');
+        if (listEl) {
+          if (!data.samples || !data.samples.length) {
+            listEl.innerHTML = '<span style="font-size:0.75rem; color:var(--text-dim);">(Ninguno en samples/)</span>';
+          } else {
+            listEl.innerHTML = data.samples.map(s => `
+              <button type="button" class="btn btn-outline btn-sm" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); border-color: rgba(255,255,255,0.15);" onclick="selectExistingSample('${escapeHtml(s.path)}')" title="Usar ${escapeHtml(s.path)} (${(s.size_bytes / 1024).toFixed(0)} KB)">
+                📁 ${escapeHtml(s.filename)}
+              </button>
+            `).join('');
+          }
+        }
+        if (enrolledSpeakers.length > 0) {
+          renderSpeakerRows();
+        }
+      } catch (e) {
+        console.warn('Error cargando samples disponibles:', e);
+      }
+    }
+
+    function selectExistingSample(path) {
+      const fileInput = document.getElementById('newRoomUriFile');
+      if (fileInput) fileInput.value = path;
+      const statusEl = document.getElementById('uploadStatusText');
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.innerText = `Seleccionado: ${path}`;
+        statusEl.style.color = 'var(--nerd-cyan)';
+      }
+      showToast(`Fuente demo asignada: ${path}`);
+    }
+
     function openCreateModal() {
       document.getElementById('createModal').classList.add('open');
-      // Asegurar que la visibilidad del loop esté sincronizada con la fuente seleccionada
       selectSourceKind(selectedKind || 'file');
+      reloadMicrophones();
+      loadAvailableSamples();
+      renderSpeakerRows();
     }
 
     function closeCreateModal() {
@@ -1178,6 +2008,8 @@
       if (modal) modal.classList.remove('open');
       const form = document.getElementById('createRoomForm');
       if (form) form.reset();
+      enrolledSpeakers = [];
+      renderSpeakerRows();
       selectSourceKind('file');
       selectBackend('local');
     }
@@ -1188,42 +2020,125 @@
         el.classList.toggle('selected', el.dataset.kind === kind);
       });
 
-      const uriLabel = document.getElementById('sourceUriLabel');
-      const uriInput = document.getElementById('newRoomUri');
-      const uriHelp = document.getElementById('uriHelpText');
-      const btnDevice = document.getElementById('btnSelectDevice');
+      const fileGroup = document.getElementById('fileSourceGroup');
+      const micGroup = document.getElementById('micSourceGroup');
+      const streamGroup = document.getElementById('streamSourceGroup');
       const loopGroup = document.getElementById('loopOptionGroup');
       const loopCheck = document.getElementById('newRoomLoop');
 
+      if (fileGroup) fileGroup.style.display = (kind === 'file') ? 'block' : 'none';
+      if (micGroup) micGroup.style.display = (kind === 'mic') ? 'block' : 'none';
+      if (streamGroup) streamGroup.style.display = (kind === 'stream') ? 'block' : 'none';
+
+      const presetDemoBtn = document.getElementById('btnPresetSpeakerDemo');
+      if (presetDemoBtn) {
+        presetDemoBtn.style.display = (kind === 'file') ? 'inline-flex' : 'none';
+      }
+
       if (kind === 'file') {
-        uriLabel.innerText = 'Ruta al archivo de audio local';
-        uriInput.value = 'samples/speech_sample.wav';
-        uriHelp.innerText = 'Formatos soportados por FFmpeg (.wav, .mp3, .m4a, .mp4)';
-        btnDevice.style.display = 'none';
+        loadAvailableSamples();
         if (loopGroup) loopGroup.style.display = 'block';
         if (loopCheck) loopCheck.checked = true;
       } else if (kind === 'mic') {
-        uriLabel.innerText = 'Dispositivo de Entrada de Micrófono';
-        uriInput.value = availableDevices.length ? availableDevices[0].id : 'Microphone';
-        uriHelp.innerText = 'Nombre DirectShow o @device_cm_... del micrófono';
-        btnDevice.style.display = 'inline-block';
         if (loopGroup) loopGroup.style.display = 'none';
         if (loopCheck) loopCheck.checked = false;
+        if (!availableDevices.length) {
+          reloadMicrophones();
+        }
       } else if (kind === 'stream') {
-        uriLabel.innerText = 'URI RTMP o HLS entrante';
-        uriInput.value = 'rtmp://0.0.0.0:1935/live/stream1';
-        uriHelp.innerText = 'FFmpeg escuchará en RTMP o consumirá HLS (.m3u8)';
-        btnDevice.style.display = 'none';
         if (loopGroup) loopGroup.style.display = 'none';
         if (loopCheck) loopCheck.checked = false;
       }
+    }
+
+    async function reloadMicrophones(showFeedback = false) {
+      const select = document.getElementById('newRoomMicSelect');
+      const btn = document.getElementById('btnRefreshMics');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Escaneando...';
+      }
+      if (select && (!select.children.length || select.value === '')) {
+        select.innerHTML = '<option value="">Detectando micrófonos DirectShow...</option>';
+      }
+
+      try {
+        const data = await apiCall('/api/devices/audio');
+        if (data && data.devices && data.devices.length) {
+          availableDevices = data.devices;
+          if (select) {
+            const currentVal = select.value;
+            select.innerHTML = data.devices.map(d =>
+              `<option value="${d.id}">${d.name}</option>`
+            ).join('') + '<option value="__custom__">Otro dispositivo (ingresar nombre manualmente)...</option>';
+
+            if (currentVal && data.devices.some(d => d.id === currentVal)) {
+              select.value = currentVal;
+            } else {
+              select.value = data.devices[0].id;
+            }
+            onMicDeviceChange(select.value);
+          }
+          if (showFeedback) {
+            showToast(`Se detectaron ${data.devices.length} dispositivos de audio.`);
+          }
+        } else {
+          if (select) {
+            select.innerHTML = '<option value="__custom__">No se detectaron micrófonos (ingresar manualmente)...</option>';
+            onMicDeviceChange('__custom__');
+          }
+          if (showFeedback) {
+            showToast('No se detectaron dispositivos de audio.', true);
+          }
+        }
+      } catch (err) {
+        console.error('Error cargando micrófonos:', err);
+        if (select) {
+          select.innerHTML = '<option value="__custom__">Error al escanear (ingresar manualmente)...</option>';
+          onMicDeviceChange('__custom__');
+        }
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = 'Actualizar';
+        }
+      }
+    }
+
+    function onMicDeviceChange(val) {
+      const customGroup = document.getElementById('customMicInputGroup');
+      if (customGroup) {
+        customGroup.style.display = (val === '__custom__') ? 'block' : 'none';
+        if (val === '__custom__') {
+          const inp = document.getElementById('newRoomMicCustom');
+          if (inp) inp.focus();
+        }
+      }
+    }
+
+    function getSelectedSourceUri() {
+      if (selectedKind === 'file') {
+        const fileInput = document.getElementById('newRoomUriFile');
+        return fileInput ? fileInput.value.trim() : 'samples/speech_sample.wav';
+      } else if (selectedKind === 'mic') {
+        const micSelect = document.getElementById('newRoomMicSelect');
+        if (micSelect && micSelect.value === '__custom__') {
+          const customInput = document.getElementById('newRoomMicCustom');
+          return customInput ? customInput.value.trim() : '';
+        }
+        return micSelect ? micSelect.value.trim() : '';
+      } else if (selectedKind === 'stream') {
+        const streamInput = document.getElementById('newRoomUriStream');
+        return streamInput ? streamInput.value.trim() : 'rtmp://0.0.0.0:1935/live/stream1';
+      }
+      return '';
     }
 
     async function quickUpdateSourceLang(roomId, newLang) {
       showToast(`Actualizando audio base de sala a: ${newLang.toUpperCase()}...`);
       const res = await apiCall(`/api/rooms/${roomId}`, 'PATCH', { source_lang: newLang });
       if (res) {
-        showToast(`🎙 Audio base configurado: ${newLang.toUpperCase()}`);
+        showToast(`Audio base configurado: ${newLang.toUpperCase()}`);
         lastRoomsHash = '';
         loadRooms();
       }
@@ -1233,7 +2148,7 @@
       showToast(`Actualizando subtítulos de salida a: ${newLang.toUpperCase()}...`);
       const res = await apiCall(`/api/rooms/${roomId}`, 'PATCH', { target_lang: newLang });
       if (res) {
-        showToast(`💬 Subtítulos de salida configurados: ${newLang.toUpperCase()}`);
+        showToast(`Subtítulos de salida configurados: ${newLang.toUpperCase()}`);
         lastRoomsHash = '';
         loadRooms();
       }
@@ -1269,6 +2184,16 @@
 
       const loopCheck = document.getElementById('newRoomLoop');
       const isLoop = selectedKind === 'file' && loopCheck && loopCheck.checked;
+      const sourceUri = getSelectedSourceUri();
+
+      if (!sourceUri) {
+        showToast('Debes seleccionar o ingresar una fuente de audio válida.', true);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerText = prevText;
+        }
+        return;
+      }
 
       const roomData = {
         id: document.getElementById('newRoomId').value.trim(),
@@ -1276,11 +2201,13 @@
         kind: selectedKind,
         backend: selectedBackend,
         whisper_model_size: document.getElementById('newRoomWhisperSize') ? document.getElementById('newRoomWhisperSize').value : 'base',
-        source_uri: document.getElementById('newRoomUri').value.trim(),
+        source_uri: sourceUri,
         source_lang: sourceLang,
         target_lang: targetLang,
         target_langs: targets,
         custom_vocabulary: custom_vocabulary,
+        speakers: [],
+        speaker_threshold: 0.70,
         loop: isLoop,
         auto_start: document.getElementById('newRoomAutoStart').checked
       };
@@ -1336,20 +2263,31 @@
     async function fetchAudioDevicesModal() {
       document.getElementById('devicesModal').classList.add('open');
       const listEl = document.getElementById('devicesList');
-      listEl.innerHTML = 'Detectando dispositivos de captura con FFmpeg...';
+      listEl.innerHTML = 'Detectando dispositivos de captura DirectShow con FFmpeg...';
 
       const data = await apiCall('/api/devices/audio');
       if (!data || !data.devices || !data.devices.length) {
-        listEl.innerHTML = '<p style="color: var(--text-muted);">No se detectaron dispositivos de audio DirectShow.</p>';
+        listEl.innerHTML = '<p style="color: var(--text-dim); font-size: 0.82rem;">No se detectaron dispositivos de audio DirectShow.</p>';
         return;
       }
 
       availableDevices = data.devices;
+      const micSelect = document.getElementById('newRoomMicSelect');
+      if (micSelect) {
+        const cur = micSelect.value;
+        micSelect.innerHTML = data.devices.map(d => `<option value="${d.id}">${d.name}</option>`).join('') + '<option value="__custom__">Otro dispositivo (ingresar nombre manualmente)...</option>';
+        if (cur && data.devices.some(d => d.id === cur)) {
+          micSelect.value = cur;
+        } else {
+          micSelect.value = data.devices[0].id;
+        }
+      }
+
       listEl.innerHTML = data.devices.map((d, idx) => `
-        <div style="background: var(--bg-dark); border: 1px solid var(--border-color); padding: 0.8rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: var(--bg-inner); border: 1px solid var(--border-subtle); padding: var(--sp-3); border-radius: var(--radius-xs); display: flex; justify-content: space-between; align-items: center;">
           <div>
-            <div style="font-weight: 600;">${d.name}</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">${d.id}</div>
+            <div style="font-weight: 600; font-size: 0.88rem;">${d.name}</div>
+            <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono);">${d.id}</div>
           </div>
           <button class="btn btn-outline btn-sm" onclick="selectDeviceByIndex(${idx})">Usar</button>
         </div>
@@ -1359,42 +2297,230 @@
     function selectDeviceByIndex(index) {
       if (availableDevices && availableDevices[index]) {
         const dev = availableDevices[index];
-        document.getElementById('newRoomUri').value = dev.id;
+        const micSelect = document.getElementById('newRoomMicSelect');
+        if (micSelect) {
+          micSelect.value = dev.id;
+          onMicDeviceChange(dev.id);
+        }
         closeDevicesModal();
         showToast('Dispositivo seleccionado: ' + dev.name);
       }
     }
 
-    function loadMicDevicesIntoUri() {
-      fetchAudioDevicesModal();
+    /* OBS Overlay Modal Functions */
+    let currentObsRoomId = null;
+    let currentObsStyle = 'broadcast';
+
+    async function openObsModal(roomId, roomName) {
+      currentObsRoomId = roomId;
+      const subtitle = document.getElementById('obsModalSubtitle');
+      if (subtitle) subtitle.innerText = `Sala: ${roomName || roomId} (${roomId})`;
+      selectObsStyle('broadcast');
+      await loadObsModalFonts();
+      updateObsUrlDisplay();
+      document.getElementById('obsModal').classList.add('open');
+    }
+
+    async function loadObsModalFonts() {
+      try {
+        const res = await fetch('/api/fonts');
+        if (!res.ok) return;
+        const data = await res.json();
+        const select = document.getElementById('obsFontSelect');
+        if (select && data.fonts && data.fonts.length) {
+          data.fonts.forEach(f => {
+            if (!Array.from(select.options).some(o => o.value === f.name)) {
+              const opt = document.createElement('option');
+              opt.value = f.name;
+              opt.textContent = `📁 ${f.name} (Local)`;
+              select.appendChild(opt);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Error cargando fuentes para OBS modal:', e);
+      }
+    }
+
+    function closeObsModal() {
+      const modal = document.getElementById('obsModal');
+      if (modal) modal.classList.remove('open');
+      currentObsRoomId = null;
+    }
+
+    function selectObsStyle(style) {
+      currentObsStyle = style;
+      const opts = ['broadcast', 'cine', 'noticiero', 'presentacion'];
+      opts.forEach(s => {
+        const el = document.getElementById('obsStyleOpt' + s.charAt(0).toUpperCase() + s.slice(1));
+        if (el) el.classList.toggle('selected', s === style);
+      });
+      updateObsUrlDisplay();
+    }
+
+    function updateObsUrlDisplay() {
+      if (!currentObsRoomId) return;
+      const langEl = document.getElementById('obsLangSelect');
+      const lang = (langEl && langEl.value) ? langEl.value : 'es';
+      const fontEl = document.getElementById('obsFontSelect');
+      const font = (fontEl && fontEl.value) ? fontEl.value : 'Outfit';
+      const baseUrl = window.location.origin;
+      const url = `${baseUrl}/room/${currentObsRoomId}?overlay=1&style=${currentObsStyle}&lang=${lang}&font=${encodeURIComponent(font)}`;
+
+      const inputEl = document.getElementById('obsGeneratedUrl');
+      if (inputEl) inputEl.value = url;
+      const prevLink = document.getElementById('obsPreviewLink');
+      if (prevLink) prevLink.href = url;
+    }
+
+    async function copyObsUrl() {
+      const inputEl = document.getElementById('obsGeneratedUrl');
+      if (!inputEl) return;
+      try {
+        await navigator.clipboard.writeText(inputEl.value);
+        showToast('URL de OBS copiada al portapapeles con éxito.');
+      } catch (e) {
+        showToast('Error al copiar URL: ' + e, true);
+      }
+    }
+
+    /* Configuration & Secrets Modal */
+    async function openConfigModal() {
+      document.getElementById('configModal').classList.add('open');
+      await loadConfigSettings();
+    }
+
+    function closeConfigModal() {
+      const modal = document.getElementById('configModal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function toggleKeyVisibility() {
+      const keyInput = document.getElementById('cfgGeminiKey');
+      const btn = document.getElementById('btnToggleKey');
+      if (keyInput.type === 'password') {
+        keyInput.type = 'text';
+        btn.innerText = 'Ocultar';
+      } else {
+        keyInput.type = 'password';
+        btn.innerText = 'Ver';
+      }
+    }
+
+    async function loadConfigSettings() {
+      const statusText = document.getElementById('keyStatusText');
+      statusText.innerText = 'Cargando ajustes del servidor...';
+      statusText.style.color = 'var(--text-dim)';
+
+      const data = await apiCall('/api/config/settings');
+      if (data) {
+        document.getElementById('cfgLiveModel').value = data.gemini_live_model || 'gemini-3.5-transcribe-live';
+        document.getElementById('cfgTranslateModel').value = data.gemini_translate_model || 'gemini-3.5-flash-lite';
+
+        if (data.has_gemini_api_key) {
+          statusText.innerText = `Clave activa persistida (${data.gemini_api_key_masked}). Dejar vacío si no deseas modificarla.`;
+          statusText.style.color = 'var(--status-live)';
+        } else {
+          statusText.innerText = 'No se ha configurado ninguna Google Gemini API Key.';
+          statusText.style.color = 'var(--status-warn)';
+        }
+      }
+    }
+
+    async function testGeminiKey() {
+      const btn = document.getElementById('btnTestKey');
+      const statusText = document.getElementById('keyStatusText');
+      const inputVal = document.getElementById('cfgGeminiKey').value.trim();
+
+      btn.disabled = true;
+      btn.innerText = 'Probando...';
+      statusText.innerText = 'Verificando conectividad con API de Google...';
+      statusText.style.color = 'var(--text-dim)';
+
+      try {
+        const body = inputVal ? { api_key: inputVal } : {};
+        const res = await apiCall('/api/config/test-gemini', 'POST', body);
+        if (res && res.status === 'ok') {
+          statusText.innerText = 'Conexión exitosa con Google Gemini API.';
+          statusText.style.color = 'var(--status-live)';
+          showToast('Clave de API verificada correctamente.');
+        } else {
+          statusText.innerText = 'Fallo de verificación: Clave inválida o sin cuota.';
+          statusText.style.color = 'var(--status-danger)';
+        }
+      } catch (err) {
+        statusText.innerText = 'Error al probar clave: ' + err;
+        statusText.style.color = 'var(--status-danger)';
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Probar';
+      }
+    }
+
+    async function handleSaveConfig(e) {
+      if (e) e.preventDefault();
+      const saveBtn = document.getElementById('btnSaveConfig');
+      saveBtn.disabled = true;
+      saveBtn.innerText = 'Guardando...';
+
+      const keyVal = document.getElementById('cfgGeminiKey').value.trim();
+      const liveModel = document.getElementById('cfgLiveModel').value.trim();
+      const transModel = document.getElementById('cfgTranslateModel').value;
+      const adminPass = document.getElementById('cfgAdminToken').value.trim();
+
+      const payload = {
+        gemini_live_model: liveModel,
+        gemini_translate_model: transModel
+      };
+      if (keyVal) {
+        payload.gemini_api_key = keyVal;
+      }
+      if (adminPass) {
+        payload.admin_token = adminPass;
+      }
+
+      const res = await apiCall('/api/config/settings', 'POST', payload);
+      if (res && res.status === 'ok') {
+        showToast('Configuración persistida en secrets/credentials.json');
+        loadCloudModelsInfo();
+        document.getElementById('cfgGeminiKey').value = '';
+        if (adminPass) {
+          sessionStorage.setItem('nejoyt_admin_token', adminPass);
+          localStorage.setItem('nejoyt_admin_token', adminPass);
+          document.getElementById('cfgAdminToken').value = '';
+        }
+        closeConfigModal();
+      }
+      saveBtn.disabled = false;
+      saveBtn.innerText = 'Guardar Cambios';
     }
 
     function closeDevicesModal() {
       document.getElementById('devicesModal').classList.remove('open');
     }
 
-    // Cerrar cualquier modal al hacer clic en el backdrop oscuro exterior o presionar Escape
     window.addEventListener('click', (e) => {
       if (e.target && e.target.classList && e.target.classList.contains('modal-overlay')) {
         closeCreateModal();
+        closeConfigModal();
         closeGlossaryModal();
         closeDevicesModal();
+        closeObsModal();
       }
     });
 
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         closeCreateModal();
+        closeConfigModal();
         closeGlossaryModal();
         closeDevicesModal();
+        closeObsModal();
       }
     });
 
-    // Startup
-    initToken();
-    loadHardwareInfo();
-    loadRooms();
-    setInterval(loadRooms, 2000);
+    initAuth();
   </script>
 </body>
+
 </html>

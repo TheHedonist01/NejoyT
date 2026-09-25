@@ -15,3 +15,7 @@ build/
 htmlcov/
 *.log
 models/
+secrets/
+scratch/
+nejoyt-deploy/
+data/

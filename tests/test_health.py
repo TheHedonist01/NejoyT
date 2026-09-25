@@ -27,12 +27,12 @@ def test_full_api():
         # 2. Página index y admin
         res_index = client.get("/")
         assert res_index.status_code == 200
-        assert "NejoyT Subtítulos" in res_index.text
+        assert "NejoyT" in res_index.text and "Nerdearla" in res_index.text
         print("[OK] GET / (index.html) exitoso")
 
         res_admin = client.get("/admin")
         assert res_admin.status_code == 200
-        assert "NejoyT Control Hub" in res_admin.text
+        assert "NejoyT" in res_admin.text and ("Control" in res_admin.text or "Operador" in res_admin.text or "Admin" in res_admin.text)
         print("[OK] GET /admin (admin.html) exitoso")
 
         # 3. Crear sala de prueba dinámicamente vía API

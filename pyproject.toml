@@ -22,6 +22,9 @@ dependencies = [
     "deep-translator>=1.11.4",
     "sentencepiece>=0.2.2",
     "sacremoses>=0.2.0",
+    "pillow>=12.3.0",
+    "speakeronnx>=0.0.1",
+    "ctranslate2>=4.0.0",
 ]
 
 [tool.uv]

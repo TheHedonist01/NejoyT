@@ -14,7 +14,7 @@ async def test_api():
     
     # 1. Probar traducción / generación de texto (con fallback a modelos disponibles)
     print("\n--- 1. Prueba de Traducción de Texto ---")
-    candidate_models = ["gemini-2.5-flash", "gemini-3.6-flash", "gemini-2.5-flash-lite", "gemini-3.5-flash-lite"]
+    candidate_models = ["gemini-3.5-flash-lite", "gemini-3.5-flash"]
     success_text = False
     
     for model in candidate_models:
@@ -36,8 +36,7 @@ async def test_api():
         response_modalities=["TEXT"],
         input_audio_transcription=types.AudioTranscriptionConfig(
             language_codes=["es-419"],
-            custom_vocabulary=["Nerdearla", "FastAPI"],
-            mode="SMART"
+            custom_vocabulary=["Nerdearla", "FastAPI"]
         )
     )
     
@@ -48,7 +47,7 @@ async def test_api():
             # Enviar 1 bloque PCM de 100ms (3.200 bytes de silencio)
             silence_chunk = b"\x00" * 3200
             await session.send_realtime_input(
-                audio=types.Blob(data=silence_chunk, mime_type="audio/pcm;rate=16000")
+                media=types.Blob(data=silence_chunk, mime_type="audio/pcm;rate=16000")
             )
             await session.send_realtime_input(audio_stream_end=True)
             print("[OK] Audio PCM de 100 ms y senal audio_stream_end enviados correctamente.")

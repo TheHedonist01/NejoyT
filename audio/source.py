@@ -131,10 +131,10 @@ class AudioSource:
         elif self.kind == SourceKind.MIC:
             system = platform.system()
             if system == "Windows":
-                uri = self.source_uri
-                # Auto-sanear si se perdió la barra invertida en GUIDs @device_cm_...
-                if "@device_" in uri and "}wave_" in uri and r"}\wave_" not in uri:
-                    uri = uri.replace("}wave_", r"}\wave_")
+                uri = (self.source_uri or "").strip().strip('"\'')
+                # Auto-sanear si se perdió la barra invertida en GUIDs @device_cm_... o @device_sw_...
+                if "@device_" in uri and "\\" not in uri and "}" in uri:
+                    uri = re.sub(r'}(wave_[A-Za-z0-9_\-]+|\{[A-Za-z0-9_\-]+\})', r'}\\\1', uri)
                 input_dev = uri if uri.startswith("audio=") else f"audio={uri}"
                 cmd.extend(["-f", "dshow", "-i", input_dev])
             elif system == "Darwin":
@@ -307,17 +307,17 @@ class AudioSource:
         if self._process and self._process.poll() is None:
             try:
                 self._process.terminate()
-                await loop.run_in_executor(None, self._process.wait)
-            except Exception:
                 try:
+                    await asyncio.wait_for(loop.run_in_executor(None, self._process.wait), timeout=1.5)
+                except (asyncio.TimeoutError, Exception):
                     self._process.kill()
-                    await loop.run_in_executor(None, self._process.wait)
-                except Exception:
-                    pass
+                    await asyncio.wait_for(loop.run_in_executor(None, self._process.wait), timeout=1.0)
+            except Exception as e:
+                logger.debug("Error cerrando proceso ffmpeg: %s", e)
 
         if self._reader_task and not self._reader_task.done():
             self._reader_task.cancel()
             try:
-                await self._reader_task
-            except asyncio.CancelledError:
+                await asyncio.wait_for(self._reader_task, timeout=1.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError, Exception):
                 pass

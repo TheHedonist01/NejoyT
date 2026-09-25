@@ -34,7 +34,10 @@ def _get_translator(pair: str) -> Optional[Tuple[object, object, str]]:
             from transformers import MarianTokenizer
 
             logger.info("Cargando traductor local CTranslate2 [%s] en %s (%s)...", pair, device.upper(), compute_type)
-            tokenizer = MarianTokenizer.from_pretrained(hf_model_id)
+            try:
+                tokenizer = MarianTokenizer.from_pretrained(hf_model_id, local_files_only=True)
+            except Exception:
+                tokenizer = MarianTokenizer.from_pretrained(hf_model_id)
             translator = ctranslate2.Translator(ct2_dir, device=device, compute_type=compute_type)
 
             # Warm-up rápido

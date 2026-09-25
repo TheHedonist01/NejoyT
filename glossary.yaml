@@ -1,0 +1,54 @@
+# Glosario Técnico de Términos Protegidos — NejoyT Nerdearla 2026
+# Estos términos se inyectan en custom_vocabulary de Gemini Live y en el traductor técnico
+# para evitar que sean traducidos erróneamente o deformados ortográficamente.
+
+glossary:
+  - Nerdearla
+  - Vibeathon
+  - Konex
+  - Kubernetes
+  - K8s
+  - Docker
+  - Container
+  - Pod
+  - Prometheus
+  - Grafana
+  - DevOps
+  - SRE
+  - Observabilidad
+  - CI/CD
+  - Terraform
+  - Ansible
+  - FastAPI
+  - Python
+  - Rust
+  - Go
+  - Golang
+  - Microservicios
+  - Service Mesh
+  - Istio
+  - Cloud Native
+  - AWS
+  - GCP
+  - Google Cloud
+  - Azure
+  - GitHub
+  - GitLab
+  - Open Source
+  - WebSocket
+  - Streaming
+  - Kernel
+  - Linux
+  - OBS
+  - FFmpeg
+  - PyTorch
+  - CTranslate2
+  - ROCm
+  - CUDA
+  - MPS
+  - VAD
+  - AsyncIO
+  - Whisper
+  - Gemma
+  - Deep Learning
+  - LLM

@@ -71,6 +71,9 @@ class EventBus:
         for queue, sub_lang in list(subscribers):
             if event.event_type == "status" or sub_lang == "all":
                 should_send = True
+            elif event.event_type == "interim":
+                # Regla 2: Interinos se transmiten en vivo para feedback en tiempo real
+                should_send = True
             elif event_lang == sub_lang:
                 should_send = True
             else:

@@ -1,9 +1,12 @@
 import asyncio
+import collections
 import logging
 import os
+import re
 import time
 import yaml
 from typing import Dict, List, Optional
+import numpy as np
 from pydantic import BaseModel
 
 from audio.source import AudioSource
@@ -34,6 +37,8 @@ class RoomStatus(BaseModel):
     subscribers: int
     subtitles_count: int
     errors_count: int
+    speakers_count: int = 0
+    enrolled_speakers: List[str] = []
     started_at: Optional[float] = None
     uptime_seconds: Optional[int] = None
 
@@ -42,6 +47,7 @@ class SessionWorker:
     """
     Trabajador asíncrono que encapsula el ciclo de vida y el pipeline de una sala:
     AudioSource (FFmpeg) -> ASRBackend (Local GPU o Gemini Cloud) -> Traductor -> EventBus + SubtitleStore
+    Integrado con Speaker ID local (ECAPA-TDNN ONNX).
     """
 
     def __init__(self, room: RoomConfig):
@@ -141,7 +147,7 @@ class SessionWorker:
             await self.stop()
 
     async def _audio_feeder(self) -> None:
-        """Lee el audio de FFmpeg y lo envía continuamente al ASR."""
+        """Lee el audio de FFmpeg, lo guarda en el buffer circular para Speaker ID y lo envía al ASR."""
         try:
             assert self.audio_source is not None
             assert self.asr is not None
@@ -160,6 +166,22 @@ class SessionWorker:
             logger.error("[%s] Error en ingesta de audio: %s", self.room.id, e, exc_info=True)
             self._set_state(RoomState.DEGRADED, f"Fallo en ingesta de audio: {e}")
 
+    @staticmethod
+    def _heuristic_detect_lang(text: str, default: str = "es") -> str:
+        """Detección ultrarrápida por stopwords comunes entre inglés y español (cero latencia)."""
+        words = set(re.findall(r'\b[a-zA-ZáéíóúñÁÉÍÓÚÑ]+\b', text.lower()))
+        if not words:
+            return default
+        es_stops = {"el", "la", "de", "que", "y", "en", "un", "una", "por", "para", "con", "no", "es", "este", "esta", "los", "las", "como", "al", "del", "pero", "su", "lo"}
+        en_stops = {"the", "be", "to", "of", "and", "a", "in", "that", "have", "i", "it", "for", "not", "on", "with", "he", "as", "you", "do", "at", "this", "but", "his", "by", "from", "they", "we", "say", "her", "she", "or", "an", "will", "my", "one", "all", "would", "there", "their", "what", "so", "up", "out", "if", "about", "who", "get", "which", "go", "me", "is", "are"}
+        es_count = len(words & es_stops)
+        en_count = len(words & en_stops)
+        if en_count > es_count:
+            return "en"
+        if es_count > en_count:
+            return "es"
+        return default
+
     async def _event_processor(self) -> None:
         """Procesa los eventos emitidos por el ASR, traduce frases finales y publica en el bus."""
         try:
@@ -168,9 +190,11 @@ class SessionWorker:
                 if self._stop_event.is_set():
                     break
 
-                speaker_lang = (asr_event.language or self.room.source_lang or "es").strip().lower()[:2]
-                if speaker_lang in ("au", "mu"):
-                    speaker_lang = "es"
+                raw_lang = (asr_event.language or self.room.source_lang or "").strip().lower()[:2]
+                if raw_lang in ("au", "mu", ""):
+                    speaker_lang = self._heuristic_detect_lang(asr_event.text, default="es")
+                else:
+                    speaker_lang = raw_lang
 
                 primary_tgt = (self.room.target_lang or "es").strip().lower()[:2]
 
@@ -185,36 +209,9 @@ class SessionWorker:
                     )
                     event_bus.publish(self.room.id, event)
 
-                    # Si el orador habla inglés y la audiencia principal escucha español (o viceversa),
-                    # generar traducción de interim rápida (~60ms) para que el espectador vea español en vivo
-                    if speaker_lang != primary_tgt and len(asr_event.text.split()) >= 2:
-                        translated_interim = await self.translator.translate(
-                            text=asr_event.text,
-                            target_lang=primary_tgt,
-                            source_lang=speaker_lang
-                        )
-                        if translated_interim and translated_interim != asr_event.text:
-                            trans_interim_event = SubtitleEvent(
-                                room_id=self.room.id,
-                                event_type="interim",
-                                text=translated_interim,
-                                language=primary_tgt,
-                                is_final=False
-                            )
-                            event_bus.publish(self.room.id, trans_interim_event)
                     continue
 
-                # 2. Evento final (frase cerrada en idioma original hablado)
-                final_event = SubtitleEvent(
-                    room_id=self.room.id,
-                    event_type="final",
-                    text=asr_event.text,
-                    language=speaker_lang,
-                    is_final=True
-                )
-                event_bus.publish(self.room.id, final_event)
-
-                # 3. Traducciones a idiomas objetivo
+                # 2. Traducciones a idiomas objetivo
                 translations: Dict[str, str] = {speaker_lang: asr_event.text}
                 active_langs = event_bus.active_languages(self.room.id)
 
@@ -230,7 +227,7 @@ class SessionWorker:
 
                     # Si ningún cliente conectado está escuchando este idioma y NO es el idioma principal configurado, omitir
                     is_primary = (tgt == primary_tgt)
-                    if not is_primary and active_langs and tgt not in active_langs:
+                    if not is_primary and (tgt not in active_langs):
                         continue
 
                     translated_text = await self.translator.translate(
@@ -240,23 +237,43 @@ class SessionWorker:
                     )
                     translations[tgt] = translated_text
 
-                    # Emitir evento de traducción para clientes que escuchan en este idioma
-                    trans_event = SubtitleEvent(
-                        room_id=self.room.id,
-                        event_type="translation",
-                        text=translated_text,
-                        language=tgt,
-                        is_final=True
-                    )
-                    event_bus.publish(self.room.id, trans_event)
-
-                # 4. Guardar en el acumulador SRT/VTT
-                subtitle_store.add_subtitle(
+                # 3. Guardar en el acumulador SQLite y memoria
+                record = subtitle_store.add_subtitle(
                     room_id=self.room.id,
                     original_text=asr_event.text,
                     original_lang=speaker_lang,
-                    translations=translations
+                    translations=translations,
+                    speaker=None
                 )
+
+                # 4. Emitir eventos
+                meta = {
+                    "index": record.index,
+                    "speaker": None,
+                    "speaker_score": None
+                }
+                final_event = SubtitleEvent(
+                    room_id=self.room.id,
+                    event_type="final",
+                    text=asr_event.text,
+                    language=speaker_lang,
+                    is_final=True,
+                    metadata=meta
+                )
+                event_bus.publish(self.room.id, final_event)
+
+                for tgt, trans_text in translations.items():
+                    if tgt == speaker_lang:
+                        continue
+                    trans_event = SubtitleEvent(
+                        room_id=self.room.id,
+                        event_type="translation",
+                        text=trans_text,
+                        language=tgt,
+                        is_final=True,
+                        metadata=meta
+                    )
+                    event_bus.publish(self.room.id, trans_event)
 
         except asyncio.CancelledError:
             pass
@@ -273,19 +290,28 @@ class SessionWorker:
         self._stop_event.set()
 
         if self.audio_source:
-            await self.audio_source.stop()
-            self.audio_source = None
+            try:
+                await asyncio.wait_for(self.audio_source.stop(), timeout=2.0)
+            except Exception as e:
+                logger.warning("[%s] Excepción deteniendo audio_source: %s", self.room.id, e)
+            finally:
+                self.audio_source = None
 
         if self.asr:
-            await self.asr.stop()
-            self.asr = None
-
-        for task in self._tasks:
-            task.cancel()
             try:
-                await task
-            except asyncio.CancelledError:
-                pass
+                await asyncio.wait_for(self.asr.stop(), timeout=2.0)
+            except Exception as e:
+                logger.warning("[%s] Excepción deteniendo asr: %s", self.room.id, e)
+            finally:
+                self.asr = None
+
+        for task in list(self._tasks):
+            if not task.done():
+                task.cancel()
+                try:
+                    await asyncio.wait_for(task, timeout=1.0)
+                except (asyncio.CancelledError, asyncio.TimeoutError, Exception):
+                    pass
         self._tasks.clear()
 
         self.is_running = False
@@ -336,6 +362,8 @@ class SessionWorker:
             subscribers=event_bus.subscriber_count(self.room.id),
             subtitles_count=len(history),
             errors_count=self.errors_count,
+            speakers_count=0,
+            enrolled_speakers=[],
             started_at=self.started_at,
             uptime_seconds=uptime
         )
@@ -422,10 +450,15 @@ class Orchestrator:
         worker = self.get_worker(room_id)
         if not worker:
             return False
-        await worker.stop()
-        del self._workers[room_id]
-        self._save_rooms()
-        logger.info("Sala eliminada: %s", room_id)
+        try:
+            # Asegurar que worker.stop() nunca bloquee la eliminación indefinidamente
+            await asyncio.wait_for(worker.stop(), timeout=3.0)
+        except (asyncio.TimeoutError, Exception) as e:
+            logger.warning("[%s] Timeout o error cerrando worker durante eliminación: %s", room_id, e)
+        finally:
+            self._workers.pop(room_id, None)
+            self._save_rooms()
+            logger.info("Sala eliminada definitivamente: %s", room_id)
         return True
 
     def patch_room(self, room_id: str, patch: RoomPatch) -> bool:

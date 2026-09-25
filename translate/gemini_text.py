@@ -40,7 +40,7 @@ class GeminiTranslator:
         self._history: deque[str] = deque(maxlen=max_context_sentences)
         self._client: Optional[genai.Client] = None
         self._cache: dict[tuple[str, str], str] = {}
-        self._semaphore = asyncio.Semaphore(1)
+        self._semaphore = asyncio.Semaphore(3)
 
     def _get_client(self) -> genai.Client:
         if self._client is None:
@@ -118,19 +118,26 @@ class GeminiTranslator:
             return cleaned
 
         system_instruction = self._build_system_instruction(target_lang)
-        prompt = f"Traduce exactamente al '{target_lang}':\n\"{cleaned}\""
-
-        models_to_try = [self.model, "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.7-flash", "gemini-3.8-flash"]
+        active_model = self.model or settings.gemini_translate_model
+        # Priorizar gemini-3.5-flash-lite por baja latencia y alta cuota free tier disponible
+        models_to_try = [
+            active_model if active_model not in ("gemini-3.8-flash", "gemini-3.6-flash") else "gemini-3.5-flash-lite",
+            "gemini-3.5-flash-lite",
+            "gemini-3.5-flash",
+        ]
         # Eliminar duplicados manteniendo orden
         seen = set()
         unique_models = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
 
+        prompt = cleaned
         async with self._semaphore:
             for model_name in unique_models:
                 try:
                     cfg_kwargs = {
                         "system_instruction": system_instruction,
                         "temperature": 0.0,
+                        "max_output_tokens": 150,
+                        "automatic_function_calling": types.AutomaticFunctionCallingConfig(disable=True),
                     }
 
                     call = client.aio.models.generate_content(
@@ -138,7 +145,7 @@ class GeminiTranslator:
                         contents=prompt,
                         config=types.GenerateContentConfig(**cfg_kwargs)
                     )
-                    response = await asyncio.wait_for(call, timeout=5.0)
+                    response = await asyncio.wait_for(call, timeout=10.0)
                     raw_text = response.text.strip() if response.text else cleaned
 
                     cleaned_trans = re.sub(
@@ -156,7 +163,8 @@ class GeminiTranslator:
                         return cleaned_trans
 
                 except Exception as e:
-                    logger.warning("Intento de traducción con [%s] falló: %s", model_name, e)
+                    err_msg = f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
+                    logger.warning("Intento de traducción con [%s] falló: %s", model_name, err_msg)
                     continue
 
         self._history.append(cleaned)

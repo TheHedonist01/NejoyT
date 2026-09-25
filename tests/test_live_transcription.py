@@ -1,6 +1,9 @@
 import asyncio
 import logging
+import os
 import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from audio.source import AudioSource
 from asr.gemini_live import GeminiLiveASR
 
@@ -11,7 +14,8 @@ logger = logging.getLogger("test_live_transcription")
 async def main():
     logger.info("Iniciando prueba de transcripción en streaming con audio real...")
     
-    audio_source = AudioSource("samples/speech_sample.wav", is_live_stream=False)
+    from config import SourceKind
+    audio_source = AudioSource(SourceKind.FILE, "samples/Nicolás Wolovick Sample -SOLO.mp4")
     asr = GeminiLiveASR(
         language="es-419",
         custom_vocabulary=["Nerdearla", "Kubernetes", "FastAPI"],

@@ -1,294 +1,911 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NejoyT — Subtitulado Nerdearla 2026</title>
+  <title>NejoyT — Subtitulado Simultáneo Nerdearla 2026</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap"
+    rel="stylesheet">
   <style>
+    /* DESIGN TOKENS (Single Source of Truth) */
     :root {
-      --bg: #0b0f19;
-      --card-bg: rgba(23, 32, 54, 0.85);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --primary: #38bdf8;
-      --primary-hover: #0284c7;
-      --text: #f8fafc;
+      /* Spacing Scale (4px-based grid) */
+      --sp-1: 4px;
+      --sp-2: 8px;
+      --sp-3: 12px;
+      --sp-4: 16px;
+      --sp-5: 20px;
+      --sp-6: 24px;
+      --sp-8: 32px;
+      --sp-12: 48px;
+
+      /* Typography */
+      --font-display: 'Outfit', 'Space Grotesk', system-ui, sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+
+      /* 60/30/10 Official Nerdearla Color Palette */
+      --bg-base: #0a0d14;
+      --bg-surface: rgba(16, 21, 33, 0.82);
+      --bg-surface-hover: rgba(23, 30, 46, 0.92);
+      --bg-card-inner: rgba(10, 14, 23, 0.88);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(254, 50, 60, 0.45);
+      --border-highlight: rgba(255, 255, 255, 0.16);
+
+      --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --badge-online: #10b981;
-      --warning: #ffab00;
-      --danger: #ef4444;
+      --text-dim: #64748b;
+
+      /* Official Nerdearla Brand Accents */
+      --nerd-red: #fe323c;
+      --nerd-yellow: #feb400;
+      --nerd-cyan: #00cbd5;
+
+      --accent: #fe323c;
+      --accent-hover: #ff4d56;
+      --accent-glow: rgba(254, 50, 60, 0.35);
+      --accent-soft: rgba(254, 50, 60, 0.14);
+
+      --cyan-soft: rgba(0, 203, 213, 0.14);
+      --cyan-glow: rgba(0, 203, 213, 0.3);
+      --yellow-soft: rgba(254, 180, 0, 0.14);
+
+      /* Semantic Status Colors */
+      --status-live: #10b981;
+      --status-live-glow: rgba(16, 185, 129, 0.3);
+      --status-warn: #feb400;
+      --status-danger: #fe323c;
+      --status-standby: #64748b;
+
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --radius-pill: 9999px;
+
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      --dur: 200ms;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
+      font-family: var(--font-display);
+      background-color: var(--bg-base);
+      background-image:
+        radial-gradient(circle at 50% -10%, rgba(254, 50, 60, 0.18) 0%, transparent 60%),
+        radial-gradient(circle at 90% 25%, rgba(0, 203, 213, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 10% 70%, rgba(254, 180, 0, 0.06) 0%, transparent 40%),
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+      color: var(--text-main);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 2rem 1rem;
+      padding: var(--sp-6) var(--sp-4) var(--sp-12);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
 
-    .top-nav {
+    /* WCAG 2.2 AA Focus Visibility */
+    *:focus-visible {
+      outline: 2px solid var(--accent) !important;
+      outline-offset: 3px !important;
+    }
+
+    .nav-container {
       width: 100%;
-      max-width: 900px;
+      max-width: 1040px;
       display: flex;
-      justify-content: flex-end;
-      margin-bottom: 1.5rem;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--sp-8);
+      padding: 0 var(--sp-2);
     }
 
-    .top-nav a {
-      color: var(--primary);
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-3);
       text-decoration: none;
+      color: var(--text-main);
+    }
+
+    .nav-brand-logo {
+      height: 28px;
+      width: auto;
+      max-width: 110px;
+      display: block;
+      filter: drop-shadow(0 0 10px rgba(0, 203, 213, 0.35));
+    }
+
+    .nav-brand-tag {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--nerd-cyan);
+      background: var(--cyan-soft);
+      border: 1px solid rgba(0, 203, 213, 0.35);
+      padding: 2px 7px;
+      border-radius: var(--radius-pill);
+    }
+
+    .nav-btn {
+      color: var(--text-main);
+      text-decoration: none;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
       font-weight: 600;
-      font-size: 0.9rem;
-      border: 1px solid rgba(56, 189, 248, 0.3);
-      padding: 0.4rem 0.9rem;
-      border-radius: 6px;
-      transition: all 0.2s;
+      letter-spacing: 0.04em;
+      border: 1px solid var(--border-subtle);
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(12px);
+      padding: var(--sp-2) var(--sp-4);
+      border-radius: var(--radius-sm);
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-2);
+      transition: all var(--dur) var(--ease);
     }
 
-    .top-nav a:hover {
-      background: rgba(56, 189, 248, 0.15);
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--border-highlight);
+      transform: translateY(-1px);
     }
 
+    /* HERO SECTION */
     header {
       text-align: center;
-      max-width: 700px;
-      margin-bottom: 2.5rem;
+      max-width: 860px;
+      width: 100%;
+      margin-bottom: clamp(52px, 8vw, 84px);
+      /* Espacio generoso entre especificaciones y salas */
+      position: relative;
     }
 
-    .badge {
-      display: inline-block;
-      padding: 0.3rem 0.8rem;
-      border-radius: 9999px;
-      background: rgba(56, 189, 248, 0.15);
-      color: var(--primary);
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      border: 1px solid rgba(56, 189, 248, 0.3);
-      letter-spacing: 0.05em;
+    .badge-event {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-2);
+      padding: 5px var(--sp-4);
+      border-radius: var(--radius-pill);
+      background: var(--accent-soft);
+      color: var(--nerd-red);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: var(--sp-3);
+      border: 1px solid rgba(254, 50, 60, 0.32);
+      letter-spacing: 0.08em;
       text-transform: uppercase;
+      box-shadow: 0 0 18px rgba(254, 50, 60, 0.18);
     }
 
-    h1 {
-      font-size: 2.5rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #fff 40%, var(--primary));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+    .badge-event-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--nerd-red);
+      box-shadow: 0 0 8px var(--nerd-red);
+      animation: pulse-dot 1.8s infinite;
+    }
+
+    @keyframes pulse-dot {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.4;
+        transform: scale(0.75);
+      }
+    }
+
+    /* HERO BRAND STAGE (Multi-layered 3D Brand Lockup) */
+    .hero-brand-stage {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 820px;
+      margin: var(--sp-2) auto var(--sp-4);
+      padding: var(--sp-8) var(--sp-3) var(--sp-2);
+      min-height: 200px;
+    }
+
+    /* Ambient chromatic aura behind the lockup */
+    .brand-aura {
+      position: absolute;
+      top: 55%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 85%;
+      max-width: 600px;
+      height: 110px;
+      background: radial-gradient(ellipse at center, rgba(254, 50, 60, 0.15) 0%, rgba(0, 203, 213, 0.08) 45%, rgba(254, 180, 0, 0.04) 75%, transparent 100%);
+      filter: blur(34px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Lockup container anchoring NejoyT, Nerdearla, and Argentina Flag proportionally */
+    .hero-brand-lockup {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 660px;
+      margin: 0 auto;
+      animation: float-subtle 4.5s ease-in-out infinite;
+      /* Bloque unificado: NejoyT y Bandera suben y bajan con el título */
+      will-change: transform;
+    }
+
+    /* Left Layer: NejoyT (alineado exactamente a la posición de la caja guía del usuario) */
+    .brand-layer-nejoyt {
+      position: absolute;
+      left: 3.2%;
+      top: 8.5%;
+      width: 17.5%;
+      z-index: 1;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      transform-origin: center center;
+    }
+
+    .logo-nejoyt-back {
+      width: 100%;
+      height: auto;
+      display: block;
+      animation: heartbeat 2.6s ease-in-out infinite;
+      will-change: transform, filter;
+      opacity: 0.98;
+      filter: drop-shadow(0 0 12px rgba(0, 203, 213, 0.45));
+    }
+
+    /* Central Foreground Layer: Nerdearla (título principal) */
+    .brand-layer-front {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .logo-nerdearla-front {
+      width: 100%;
+      max-width: 660px;
+      height: auto;
+      display: block;
+      filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.88)) drop-shadow(0 0 1px rgba(255, 255, 255, 0.18));
+      will-change: filter;
+    }
+
+    /* Right Layer: Bandera Argentina (con su propio círculo negro original, movida ligeramente a la derecha y 1 abajo) */
+    .brand-layer-flag {
+      position: absolute;
+      left: 99.0%;
+      top: 85.5%;
+      width: 7.8%;
+      aspect-ratio: 1 / 1;
+      transform: translate(-50%, -50%);
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      overflow: hidden;
+      border: none;
+      box-shadow: none;
+      pointer-events: auto;
+      cursor: default;
+      transition: transform 0.2s ease;
+    }
+
+    .brand-layer-flag:hover {
+      transform: translate(-50%, -50%) scale(1.15) rotate(4deg);
+    }
+
+    .flag-argentina-hero {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      animation: flag-heartbeat 2.6s ease-in-out infinite;
+      will-change: transform, filter;
+    }
+
+    /* Heartbeat animation for NejoyT (organic lub-dub pulsing heartbeat) */
+    @keyframes heartbeat {
+      0% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 12px rgba(0, 203, 213, 0.35));
+        opacity: 0.85;
+      }
+
+      14% {
+        transform: scale(1.045);
+        filter: drop-shadow(0 0 24px rgba(254, 50, 60, 0.65));
+        opacity: 1;
+      }
+
+      28% {
+        transform: scale(1.015);
+        filter: drop-shadow(0 0 16px rgba(254, 180, 0, 0.45));
+        opacity: 0.9;
+      }
+
+      42% {
+        transform: scale(1.07);
+        filter: drop-shadow(0 0 30px rgba(254, 50, 60, 0.75)) drop-shadow(0 0 12px rgba(0, 203, 213, 0.5));
+        opacity: 1;
+      }
+
+      70% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 12px rgba(0, 203, 213, 0.35));
+        opacity: 0.85;
+      }
+
+      100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 12px rgba(0, 203, 213, 0.35));
+        opacity: 0.85;
+      }
+    }
+
+    /* Animación flotante unificada: mueve todo el bloque (Nerdearla + NejoyT + Bandera) a la vez */
+    @keyframes float-subtle {
+
+      0%,
+      100% {
+        transform: translateY(0px);
+      }
+
+      50% {
+        transform: translateY(-5px);
+      }
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     p.subtitle {
       color: var(--text-muted);
-      font-size: 1.05rem;
-      line-height: 1.5;
+      font-size: 1.1rem;
+      max-width: 680px;
+      margin: 0 auto var(--sp-6);
+      line-height: 1.6;
     }
 
+
+    /* SPEC PILLS */
+    .spec-pills {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: var(--sp-3);
+    }
+
+    .spec-pill {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-pill);
+      padding: var(--sp-1) var(--sp-3);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+
+    .spec-pill strong {
+      color: var(--text-muted);
+    }
+
+    /* ROOMS GRID */
     .container {
       width: 100%;
-      max-width: 900px;
-      display: grid;
-      gap: 1.25rem;
-    }
-
-    .room-card {
-      background: var(--card-bg);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--card-border);
-      border-radius: 14px;
-      padding: 1.5rem;
-      transition: transform 0.2s ease, border-color 0.2s ease;
+      max-width: 1040px;
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: var(--sp-5);
+    }
+
+    /* ROOM CARD (Elevated Glassmorphism) */
+    .room-card {
+      background: var(--bg-surface);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: var(--sp-6);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-4);
+      position: relative;
+      overflow: hidden;
+      transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+    }
+
+    .room-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(255, 111, 32, 0.4), transparent);
+      opacity: 0;
+      transition: opacity var(--dur) var(--ease);
     }
 
     .room-card:hover {
       transform: translateY(-2px);
-      border-color: rgba(56, 189, 248, 0.4);
+      border-color: var(--border-active);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5), 0 0 24px rgba(255, 111, 32, 0.12);
+    }
+
+    .room-card:hover::before {
+      opacity: 1;
     }
 
     .room-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 1rem;
+      gap: var(--sp-4);
       flex-wrap: wrap;
+    }
+
+    .room-title-group {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
     }
 
     .room-title {
-      font-size: 1.25rem;
+      font-size: 1.35rem;
       font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text-main);
     }
 
-    .status-indicator {
-      display: flex;
+    /* Multi-channel Status Badge */
+    .status-badge {
+      display: inline-flex;
       align-items: center;
-      gap: 0.45rem;
-      font-size: 0.85rem;
+      gap: 7px;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
       font-weight: 700;
-      padding: 0.25rem 0.6rem;
-      border-radius: 20px;
-      letter-spacing: 0.04em;
+      padding: 4px var(--sp-3);
+      border-radius: var(--radius-pill);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
     }
 
-    .status-indicator.active {
-      color: var(--badge-online);
+    .status-badge.active {
+      color: var(--status-live);
       background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
     }
 
-    .status-indicator.starting, .status-indicator.degraded {
-      color: var(--warning);
-      background: rgba(255, 171, 0, 0.12);
-      border: 1px solid rgba(255, 171, 0, 0.3);
+    .status-badge.starting,
+    .status-badge.degraded {
+      color: var(--status-warn);
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.35);
     }
 
-    .status-indicator.stopped {
-      color: var(--text-muted);
-      background: rgba(148, 163, 184, 0.1);
+    .status-badge.stopped {
+      color: var(--status-standby);
+      background: rgba(148, 163, 184, 0.08);
       border: 1px solid rgba(148, 163, 184, 0.2);
     }
 
-    .status-indicator.error {
-      color: var(--danger);
+    .status-badge.error {
+      color: var(--status-danger);
       background: rgba(239, 68, 68, 0.12);
-      border: 1px solid rgba(239, 68, 68, 0.3);
+      border: 1px solid rgba(239, 68, 68, 0.35);
     }
 
-    .status-dot {
-      width: 8px;
-      height: 8px;
+    .radar-dot {
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
+      background: currentColor;
+      position: relative;
     }
 
-    .status-indicator.active .status-dot {
-      background-color: var(--badge-online);
-      box-shadow: 0 0 8px var(--badge-online);
-      animation: pulse 1.5s infinite;
+    .status-badge.active .radar-dot::after {
+      content: '';
+      position: absolute;
+      top: -3px;
+      left: -3px;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      border: 1px solid var(--status-live);
+      animation: radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
     }
 
-    .status-indicator.starting .status-dot, .status-indicator.degraded .status-dot {
-      background-color: var(--warning);
+    @keyframes radar-ping {
+      0% {
+        transform: scale(0.6);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(2.2);
+        opacity: 0;
+      }
     }
 
-    .status-indicator.stopped .status-dot {
-      background-color: var(--text-muted);
-    }
-
-    .status-indicator.error .status-dot {
-      background-color: var(--danger);
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
-    }
-
-    .room-meta {
+    /* ROOM METADATA TAGS */
+    .room-meta-grid {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
-      font-size: 0.85rem;
+      gap: var(--sp-2);
+    }
+
+    .meta-tag {
+      background: var(--bg-card-inner);
+      padding: 6px var(--sp-3);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
       color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-1);
     }
 
-    .tag {
-      background: rgba(255, 255, 255, 0.05);
-      padding: 0.25rem 0.6rem;
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
+    .meta-tag strong {
+      color: var(--text-main);
+      font-weight: 600;
     }
 
+    .meta-tag-accent {
+      border-color: rgba(254, 50, 60, 0.3);
+      color: var(--nerd-red);
+      background: var(--accent-soft);
+    }
+
+    /* ACTIONS BUTTONS */
     .room-actions {
       display: flex;
-      gap: 0.75rem;
-      margin-top: 0.5rem;
+      gap: var(--sp-3);
+      margin-top: var(--sp-1);
       flex-wrap: wrap;
     }
 
     .btn {
       flex: 1;
       min-width: 140px;
+      min-height: 44px;
+      /* WCAG 2.2 Touch area */
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      gap: var(--sp-2);
       text-decoration: none;
+      font-family: var(--font-display);
       font-weight: 600;
-      font-size: 0.95rem;
-      padding: 0.7rem 1.2rem;
-      border-radius: 8px;
-      transition: all 0.2s ease;
+      font-size: 0.92rem;
+      padding: var(--sp-2) var(--sp-5);
+      border-radius: var(--radius-sm);
+      transition: all var(--dur) var(--ease);
       cursor: pointer;
+      border: 1px solid transparent;
     }
 
     .btn-primary {
-      background: var(--primary);
-      color: #0b0f19;
+      background: linear-gradient(135deg, var(--nerd-red) 0%, #d81a24 100%);
+      color: #ffffff;
+      font-weight: 700;
+      border: 1px solid rgba(254, 180, 0, 0.35);
+      box-shadow: 0 4px 16px var(--accent-glow);
     }
 
     .btn-primary:hover {
-      background: var(--primary-hover);
-      color: #fff;
+      background: linear-gradient(135deg, var(--accent-hover) 0%, var(--nerd-red) 100%);
+      box-shadow: 0 6px 22px rgba(254, 50, 60, 0.55), 0 0 12px rgba(254, 180, 0, 0.35);
+      transform: translateY(-1px);
     }
 
     .btn-secondary {
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-main);
+      border-color: var(--border-subtle);
     }
 
     .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.09);
+      border-color: var(--border-highlight);
+      transform: translateY(-1px);
+    }
+
+    /* SKELETON LOADERS (Exact Dimensions, Prevents CLS) */
+    .skeleton-card {
+      background: var(--bg-surface);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: var(--sp-6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-4);
+    }
+
+    .skeleton-shimmer {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.02) 25%, rgba(255, 255, 255, 0.07) 50%, rgba(255, 255, 255, 0.02) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.8s infinite linear;
+      border-radius: var(--radius-sm);
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: 200% 0;
+      }
+
+      100% {
+        background-position: -200% 0;
+      }
     }
 
     footer {
-      margin-top: 3rem;
-      font-size: 0.85rem;
-      color: var(--text-muted);
+      margin-top: var(--sp-12);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-2);
+    }
+
+    /* RESPONSIVE DESIGN (Strict Mobile-First Adaptability for Attendees) */
+    @media (max-width: 640px) {
+      body {
+        padding: var(--sp-4) var(--sp-3) var(--sp-8);
+      }
+
+      .nav-container {
+        margin-bottom: var(--sp-4);
+      }
+
+      .nav-btn span {
+        font-size: 0.76rem;
+      }
+
+      .hero-brand-stage {
+        min-height: 125px;
+        padding: var(--sp-4) var(--sp-1) var(--sp-1);
+        margin-bottom: var(--sp-3);
+      }
+
+      .brand-aura {
+        height: 80px;
+        filter: blur(20px);
+      }
+
+      .hero-brand-lockup {
+        max-width: 100%;
+      }
+
+      header {
+        margin-bottom: clamp(38px, 6vw, 52px);
+      }
+
+      p.subtitle {
+        font-size: 0.95rem;
+        margin-bottom: var(--sp-4);
+        padding: 0 var(--sp-2);
+      }
+
+      .spec-pills {
+        gap: var(--sp-2);
+      }
+
+      .spec-pill {
+        font-size: 0.72rem;
+        padding: 3px 8px;
+      }
+
+      .room-card {
+        padding: var(--sp-4);
+        gap: var(--sp-3);
+      }
+
+      .room-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--sp-2);
+      }
+
+      .room-meta-grid {
+        gap: var(--sp-2);
+      }
+
+      .meta-tag {
+        font-size: 0.74rem;
+        padding: 3px 8px;
+      }
+
+      .room-actions {
+        flex-direction: column;
+        gap: var(--sp-2);
+      }
+
+      .btn {
+        width: 100%;
+        min-height: 48px;
+        /* Roomy touch targets for thumb interaction in auditorium */
+      }
+    }
+
+    /* Reduced Motion (WCAG 2.2 AA) */
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      ::before,
+      ::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
     }
   </style>
 </head>
+
 <body>
-  <div class="top-nav">
-    <a href="/admin">⚙ Panel de Operador / Admin</a>
-  </div>
+  <nav class="nav-container" aria-label="Navegación principal">
+    <a href="/" class="brand-mark" aria-label="NejoyT Inicio">
+      <img src="/img/NeJoyT_Logo_V2.svg" alt="NejoyT" class="nav-brand-logo" />
+      <span class="nav-brand-tag">2026</span>
+    </a>
+    <a href="/admin" class="nav-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+        <line x1="3" y1="9" x2="21" y2="9" />
+        <line x1="9" y1="21" x2="9" y2="9" />
+      </svg>
+      <span>Panel de Admin</span>
+    </a>
+  </nav>
 
   <header>
-    <div class="badge">Nerdearla 2026 · Vibeathon</div>
-    <h1>NejoyT Subtítulos</h1>
-    <p class="subtitle">Transcripción continua y traducción simultánea de conferencias técnicas en tiempo real con Gemini 3.5 Live.</p>
+    <div class="badge-event">
+      <span class="badge-event-dot"></span>
+      <span>Nerdearla 2026 · Vibeathon Hackathon</span>
+    </div>
+
+    <!-- Escenario de Marca: Nerdearla en primer plano grande, NejoyT latiendo atrás a la izquierda y Bandera Argentina a la derecha -->
+    <div class="hero-brand-stage" aria-label="Nerdearla, NejoyT y Bandera de Argentina">
+      <div class="brand-aura" aria-hidden="true"></div>
+
+      <div class="hero-brand-lockup">
+        <!-- NejoyT detrás del hombro izquierdo de la 'N' de Nerdearla -->
+        <div class="brand-layer-nejoyt" aria-hidden="true">
+          <img src="/img/NeJoyT_Logo_V2.svg" alt="NejoyT" class="logo-nejoyt-back" />
+        </div>
+
+        <!-- Nerdearla al frente, título principal grande y protagónico -->
+        <div class="brand-layer-front">
+          <img src="/img/NERDEARLA_logo.svg" alt="Nerdearla" class="logo-nerdearla-front" />
+          <h1 class="visually-hidden">Nerdearla — Subtitulado en Vivo y Traducción Simultánea NejoyT</h1>
+        </div>
+
+        <!-- Bandera Argentina en el hombro superior derecho de la última 'A' -->
+        <div class="brand-layer-flag" title="Hecho en Argentina para Nerdearla 2026" aria-label="Bandera de Argentina">
+          <img src="/img/Bandera_Argentina_para_Nerdearla.svg" alt="Bandera de Argentina" class="flag-argentina-hero" />
+        </div>
+      </div>
+    </div>
+
+    <p class="subtitle">
+      Subtitulado en Vivo y Traducción Simultánea multi-sala con Gemini Live y ASR Local.
+    </p>
+    <div class="spec-pills">
+      <span class="spec-pill">Sesiones: <strong>Rotación Continua (~9m)</strong></span>
+      <span class="spec-pill">Latencia: <strong>Streaming WebSocket</strong></span>
+      <span class="spec-pill">Hardware: <strong>CUDA / MPS / ROCm / CPU</strong></span>
+    </div>
   </header>
 
-  <main class="container" id="rooms-list">
-    <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-      Cargando salas del evento...
+  <main class="container" id="rooms-list" aria-live="polite">
+    <!-- Skeleton Loaders Preserving Exact Card Shape -->
+    <div class="skeleton-card" aria-busy="true" aria-label="Cargando salas...">
+      <div class="room-header">
+        <div class="skeleton-shimmer" style="width: 240px; height: 26px;"></div>
+        <div class="skeleton-shimmer" style="width: 95px; height: 26px; border-radius: var(--radius-pill);"></div>
+      </div>
+      <div class="room-meta-grid">
+        <div class="skeleton-shimmer" style="width: 120px; height: 28px;"></div>
+        <div class="skeleton-shimmer" style="width: 130px; height: 28px;"></div>
+        <div class="skeleton-shimmer" style="width: 160px; height: 28px;"></div>
+        <div class="skeleton-shimmer" style="width: 110px; height: 28px;"></div>
+      </div>
+      <div class="room-actions">
+        <div class="skeleton-shimmer" style="flex: 1; height: 44px;"></div>
+        <div class="skeleton-shimmer" style="flex: 1; height: 44px;"></div>
+        <div class="skeleton-shimmer" style="flex: 1; height: 44px;"></div>
+      </div>
+    </div>
+    <div class="skeleton-card" aria-busy="true" aria-label="Cargando salas...">
+      <div class="room-header">
+        <div class="skeleton-shimmer" style="width: 220px; height: 26px;"></div>
+        <div class="skeleton-shimmer" style="width: 95px; height: 26px; border-radius: var(--radius-pill);"></div>
+      </div>
+      <div class="room-meta-grid">
+        <div class="skeleton-shimmer" style="width: 110px; height: 28px;"></div>
+        <div class="skeleton-shimmer" style="width: 140px; height: 28px;"></div>
+        <div class="skeleton-shimmer" style="width: 150px; height: 28px;"></div>
+        <div class="skeleton-shimmer" style="width: 110px; height: 28px;"></div>
+      </div>
+      <div class="room-actions">
+        <div class="skeleton-shimmer" style="flex: 1; height: 44px;"></div>
+        <div class="skeleton-shimmer" style="flex: 1; height: 44px;"></div>
+        <div class="skeleton-shimmer" style="flex: 1; height: 44px;"></div>
+      </div>
     </div>
   </main>
 
   <footer>
-    Desarrollado para Nerdearla 2026 · Licencia Apache 2.0
+    <div>NejoyT · Sistema de Subtitulado Inteligente · Licencia Apache 2.0</div>
+    <div style="color: var(--text-muted); font-size: 0.72rem;">Desarrollado para Nerdearla 2026 - Mauro G Martinez</div>
   </footer>
 
   <script>
     async function loadRooms() {
       try {
         const res = await fetch('/api/rooms');
+        if (!res.ok) return;
         const data = await res.json();
         const container = document.getElementById('rooms-list');
 
         if (!data.rooms || data.rooms.length === 0) {
-          container.innerHTML = '<div style="text-align: center; color: var(--text-muted);">No hay salas configuradas actualmente.</div>';
+          container.innerHTML = `
+            <div class="room-card" style="text-align: center; color: var(--text-muted); padding: var(--sp-8);">
+              <h3 style="font-size: 1.2rem; color: var(--text-main);">No hay salas activas en este momento</h3>
+              <p style="margin-top: var(--sp-2); font-size: 0.9rem;">Todavia no existen Salas Disponibles. Disculpe las Molestias</p>
+            </div>
+          `;
           return;
         }
 
@@ -310,26 +927,54 @@
             stateLabel = 'ERROR';
           }
 
+          const targetList = (room.target_langs || [room.target_lang || 'es']).map(l => l.toUpperCase()).join(' · ');
+
           return `
             <article class="room-card">
               <div class="room-header">
-                <h2 class="room-title">${room.name}</h2>
-                <div class="status-indicator ${stateClass}">
-                  <span class="status-dot"></span>
+                <div class="room-title-group">
+                  <h2 class="room-title">${room.name}</h2>
+                </div>
+                <div class="status-badge ${stateClass}" role="status">
+                  <span class="radar-dot" aria-hidden="true"></span>
                   <span>${stateLabel}</span>
                 </div>
               </div>
-              <div class="room-meta">
-                <span class="tag">Fuente: <strong>${room.kind.toUpperCase()}</strong></span>
-                <span class="tag">Origen: <strong>${room.source_lang.toUpperCase()}</strong></span>
-                <span class="tag">Destinos: <strong>${room.target_langs.join(', ').toUpperCase()}</strong></span>
-                <span class="tag">Audiencia: <strong>${room.subscribers}</strong></span>
-                <span class="tag">Frases: <strong>${room.subtitles_count}</strong></span>
+              <div class="room-meta-grid">
+                <span class="meta-tag">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                  Fuente: <strong>${(room.kind || 'file').toUpperCase()}</strong>
+                </span>
+                <span class="meta-tag">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+                  Voz: <strong>${(room.source_lang || 'en').toUpperCase()}</strong>
+                </span>
+                <span class="meta-tag meta-tag-accent">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg>
+                  Subtítulos: <strong>${targetList}</strong>
+                </span>
+                <span class="meta-tag">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  Audiencia: <strong>${room.subscribers || 0}</strong>
+                </span>
+                <span class="meta-tag">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Líneas: <strong>${room.subtitles_count || 0}</strong>
+                </span>
               </div>
               <div class="room-actions">
-                <a href="/room/${room.id}" class="btn btn-primary">Abrir Subtítulos</a>
-                <a href="/room/${room.id}?overlay=1" target="_blank" class="btn btn-secondary">Overlay OBS</a>
-                <a href="/api/rooms/${room.id}/export?format=srt" class="btn btn-secondary">Descargar SRT</a>
+                <a href="/room/${room.id}" class="btn btn-primary" title="Ver subtítulos en vivo en pantalla">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                  <span>Subtítulos en Vivo</span>
+                </a>
+                <a href="/api/rooms/${room.id}/export?format=html" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" title="Leer transcripción continua estructurada o imprimir a PDF">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                  <span>Leer / PDF</span>
+                </a>
+                <a href="/api/rooms/${room.id}/export?format=txt" class="btn btn-secondary" title="Descargar texto continuo para lectura o prompts de IA">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  <span>Descargar TXT</span>
+                </a>
               </div>
             </article>
           `;
@@ -343,4 +988,5 @@
     setInterval(loadRooms, 3000);
   </script>
 </body>
+
 </html>

@@ -196,7 +196,7 @@ La fábrica de fuentes se escribe entera en la Fase 1, aunque esa tarde solo la 
 
 **Criterio de salida:** 40 minutos de transcripción continua, con los cortes de rotación invisibles en el texto.
 
-> ⚠️ Si a las 17:00 esto no anda, **pasá al backend local y seguí**. No podés perder el sábado acá.
+> [NOTA] Si a las 17:00 esto no anda, **pasá al backend local y seguí**. No podés perder el sábado acá.
 
 ---
 
@@ -251,13 +251,13 @@ La fábrica de fuentes se escribe entera en la Fase 1, aunque esa tarde solo la 
 - Prueba: **dos charlas distintas en paralelo**, una en inglés y una en español, y agregar una tercera sala en caliente sin reiniciar el proceso
 - Medir uso de CPU y memoria con 2-3 salas y extrapolar a 10 en el README
 
-**Criterio de salida:** ✅ **MVP COMPLETO.** Acá cumplís los cinco requisitos mínimos de las bases, y además tenés control real de salas, no solo config estática leída una vez. Andá a dormir.
+**Criterio de salida:** **MVP COMPLETO.** Acá cumplís los cinco requisitos mínimos de las bases, y además tenés control real de salas, no solo config estática leída una vez. Andá a dormir.
 
 > **Regla de disciplina:** si a la 1:00 no cerraste esta fase, cortá igual y dormí. El domingo con sueño se destruye más de lo que se construye. Todo lo que sigue es opcional.
 
 ---
 
-### 😴 DESCANSO (01:00 a 08:00)
+### DESCANSO (01:00 a 08:00)
 
 No es opcional. Te quedan 4 horas de trabajo y una entrega. Programá alarma.
 

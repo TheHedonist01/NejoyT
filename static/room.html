@@ -1,161 +1,288 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Subtítulos en Vivo — NejoyT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;600;700;800&family=Lexend:wght@400;600;700&family=Montserrat:wght@400;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;600&family=Space+Grotesk:wght@500;600;700&display=swap"
+    rel="stylesheet">
   <style>
+    /* DESIGN TOKENS */
     :root {
-      --bg: #07090e;
-      --card-bg: rgba(15, 23, 42, 0.75);
-      --border: rgba(255, 255, 255, 0.1);
-      --primary: #38bdf8;
+      --sp-1: 4px;
+      --sp-2: 8px;
+      --sp-3: 12px;
+      --sp-4: 16px;
+      --sp-5: 20px;
+      --sp-6: 24px;
+      --sp-8: 32px;
+
+      --font-display: 'Outfit', 'Space Grotesk', system-ui, sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+
+      /* 60/30/10 Palette */
+      --bg: #0a0d14;
+      --surface-toolbar: rgba(16, 21, 33, 0.92);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-highlight: rgba(255, 255, 255, 0.16);
+
       --text: #f8fafc;
       --text-interim: #94a3b8;
-      --text-time: #64748b;
-      --warning: #ffab00;
-      --danger: #ef4444;
-      --success: #10b981;
-      --font-size: 1.5rem;
-      --line-height: 1.6;
+      --text-muted: #64748b;
+
+      --accent: #fe323c;
+      --accent-hover: #ff4d56;
+      --accent-glow: rgba(254, 50, 60, 0.35);
+      --nerd-yellow: #feb400;
+      --nerd-cyan: #00cbd5;
+      --status-live: #10b981;
+      --status-warn: #feb400;
+      --status-danger: #fe323c;
+
+      --font-size: 1.6rem;
+      --line-height: 1.65;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-pill: 9999px;
+
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      --dur: 180ms;
     }
 
+    /* WCAG AAA High Contrast Mode */
     body.high-contrast {
       --bg: #000000;
-      --card-bg: #000000;
-      --border: #ffff00;
-      --primary: #ffff00;
+      --surface-toolbar: #000000;
+      --border-subtle: #ffff00;
+      --border-highlight: #ffffff;
       --text: #ffff00;
       --text-interim: #ffffff;
-      --text-time: #aaaaaa;
+      --text-muted: #e2e8f0;
+      --accent: #ffff00;
+      --accent-hover: #ffea00;
+      --status-live: #00ff66;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: var(--font-display);
       background-color: var(--bg);
+      background-image:
+        radial-gradient(circle at 50% 0%, rgba(255, 111, 32, 0.09) 0%, transparent 55%),
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 36px 36px, 36px 36px;
       color: var(--text);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       overflow-x: hidden;
+      line-height: var(--line-height);
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* BARRA SUPERIOR */
+    /* WCAG 2.2 AA Focus Ring */
+    *:focus-visible {
+      outline: 2px solid var(--accent) !important;
+      outline-offset: 3px !important;
+    }
+
+    /* ACCESSIBLE TOOLBAR (Sticky Frosted Header) */
     header.toolbar {
       position: sticky;
       top: 0;
       z-index: 50;
-      background: var(--card-bg);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border);
-      padding: 0.75rem 1.25rem;
+      background: var(--surface-toolbar);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: var(--sp-3) var(--sp-6);
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 1rem;
+      gap: var(--sp-4);
+      min-height: 64px;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: var(--sp-3);
     }
 
-    .brand a {
-      color: var(--primary);
+    .nav-back {
+      color: var(--text-main);
       text-decoration: none;
-      font-weight: 700;
-      font-size: 1rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 0.82rem;
+      border: 1px solid var(--border-subtle);
+      background: rgba(255, 255, 255, 0.04);
+      padding: var(--sp-2) var(--sp-3);
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-2);
+      min-height: 38px;
+      transition: all var(--dur) var(--ease);
+    }
+
+    .nav-back:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: var(--border-highlight);
+      transform: translateY(-1px);
     }
 
     .room-name {
-      font-weight: 600;
-      font-size: 1.05rem;
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.015em;
       color: var(--text);
     }
 
     .controls {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
+      gap: var(--sp-2);
       flex-wrap: wrap;
     }
 
-    select, button {
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text);
-      border: 1px solid var(--border);
-      padding: 0.45rem 0.8rem;
-      border-radius: 6px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      cursor: pointer;
-      outline: none;
-      transition: all 0.2s ease;
-    }
-
-    select:hover, button:hover {
-      background: rgba(255, 255, 255, 0.15);
-      border-color: var(--primary);
-    }
-
-    .status-badge {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-size: 0.85rem;
-      font-weight: 600;
-      padding: 0.35rem 0.7rem;
-      border-radius: 9999px;
-      background: rgba(148, 163, 184, 0.15);
-      color: #94a3b8;
-      border: 1px solid rgba(148, 163, 184, 0.3);
+    .ctrl-label {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.05em;
+    }
+
+    select.ctrl-select {
+      background: rgba(12, 16, 26, 0.85);
+      color: var(--text);
+      border: 1px solid var(--border-subtle);
+      padding: var(--sp-2) var(--sp-3);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-display);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 38px;
+      transition: border-color var(--dur) var(--ease);
+    }
+
+    select.ctrl-select:hover,
+    select.ctrl-select:focus {
+      border-color: var(--accent);
+    }
+
+    .ctrl-btn {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      border: 1px solid var(--border-subtle);
+      padding: var(--sp-2) var(--sp-3);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 38px;
+      min-width: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--dur) var(--ease);
+    }
+
+    .ctrl-btn:hover {
+      border-color: var(--border-highlight);
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .ctrl-btn-active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(255, 111, 32, 0.12);
+    }
+
+    /* Multi-channel Status Badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: var(--sp-2) var(--sp-3);
+      border-radius: var(--radius-pill);
+      background: rgba(148, 163, 184, 0.08);
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      min-height: 38px;
     }
 
     .status-badge.active {
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--success);
-      border-color: rgba(16, 185, 129, 0.3);
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--status-live);
+      border-color: rgba(16, 185, 129, 0.35);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
     }
 
-    .status-badge.starting, .status-badge.degraded {
-      background: rgba(255, 171, 0, 0.15);
-      color: var(--warning);
-      border-color: rgba(255, 171, 0, 0.3);
+    .status-badge.starting,
+    .status-badge.degraded {
+      background: rgba(245, 158, 11, 0.12);
+      color: var(--status-warn);
+      border-color: rgba(245, 158, 11, 0.35);
     }
 
-    .status-badge.error, .status-badge.disconnected {
-      background: rgba(239, 68, 68, 0.15);
-      color: var(--danger);
-      border-color: rgba(239, 68, 68, 0.3);
+    .status-badge.error,
+    .status-badge.disconnected {
+      background: rgba(239, 68, 68, 0.12);
+      color: var(--status-danger);
+      border-color: rgba(239, 68, 68, 0.35);
     }
 
-    /* BANNER DE ESTADO INFORMATIVO */
+    .radar-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 6px currentColor;
+    }
+
+    /* RECONNECTION BANNER */
     #status-banner {
       display: none;
-      padding: 1rem 1.5rem;
-      background: rgba(255, 171, 0, 0.1);
-      border-bottom: 1px solid rgba(255, 171, 0, 0.3);
-      color: var(--warning);
+      padding: var(--sp-3) var(--sp-6);
+      background: rgba(245, 158, 11, 0.1);
+      border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+      color: var(--status-warn);
       text-align: center;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
+      font-weight: 500;
     }
 
-    /* CONTENEDOR DE SUBTÍTULOS */
+    /* SUBTITLES STREAM CONTAINER */
     main.subtitles-container {
       flex: 1;
       width: 100%;
-      max-width: 1100px;
+      max-width: 1080px;
       margin: 0 auto;
-      padding: 2rem 1.5rem 6rem;
+      padding: var(--sp-8) var(--sp-6) 9rem;
       display: flex;
       flex-direction: column;
-      gap: 1.25rem;
+      gap: var(--sp-5);
     }
 
     .standby-placeholder {
@@ -165,21 +292,22 @@
       justify-content: center;
       text-align: center;
       margin: auto 0;
-      padding: 4rem 1rem;
-      color: var(--text-interim);
+      padding: var(--sp-12) var(--sp-4);
+      color: var(--text-muted);
     }
 
     .standby-placeholder h2 {
-      font-size: 1.5rem;
-      margin-bottom: 0.5rem;
+      font-size: 1.45rem;
+      margin-bottom: var(--sp-2);
       color: var(--text);
     }
 
     .subtitle-block {
       font-size: var(--font-size);
       line-height: var(--line-height);
-      animation: fadeIn 0.25s ease-out;
       word-break: break-word;
+      animation: fade-in 0.22s var(--ease);
+      padding: 2px 0;
     }
 
     .subtitle-final {
@@ -187,108 +315,601 @@
       font-weight: 500;
     }
 
+    .speaker-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      margin-right: 10px;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: linear-gradient(135deg, rgba(255, 111, 32, 0.22), rgba(255, 159, 10, 0.15));
+      color: #ff9f0a;
+      border: 1px solid rgba(255, 111, 32, 0.45);
+      box-shadow: 0 0 10px rgba(255, 111, 32, 0.18);
+      vertical-align: middle;
+      user-select: none;
+    }
+
+    .speaker-pill::before {
+      content: "🎙️";
+      font-size: 0.70rem;
+    }
+
+    /* Interim Subtitles */
     .subtitle-interim {
       color: var(--text-interim);
       font-style: italic;
-      opacity: 0.85;
-      border-left: 3px solid var(--primary);
-      padding-left: 0.75rem;
+      opacity: 0.92;
+      border-left: 3px solid var(--accent);
+      padding-left: var(--sp-4);
+      margin-top: var(--sp-1);
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
+    @keyframes fade-in {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
-    /* MODO OVERLAY PARA OBS (?overlay=1) */
+    /* FLOATING SCROLL RESUME PILL */
+    #scroll-resume-banner {
+      display: none;
+      position: fixed;
+      bottom: 2.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(18, 23, 36, 0.95);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: var(--sp-2) var(--sp-5);
+      border-radius: var(--radius-pill);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      font-weight: 700;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7), 0 0 16px var(--accent-glow);
+      cursor: pointer;
+      z-index: 100;
+      transition: all var(--dur) var(--ease);
+    }
+
+    #scroll-resume-banner:hover {
+      transform: translateX(-50%) translateY(-2px);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 111, 32, 0.4);
+    }
+
+    /* ==============================================================
+       SUBTITLE STYLES SYSTEM (Cine, Noticiero, Presentación, Broadcast)
+       ============================================================== */
+
+    /* 1. ESTILO CINE (Netflix Style: Pop-on, Centrado, 1-2 líneas, desaparición limpia) */
+    body.style-cine main.subtitles-container {
+      position: fixed;
+      bottom: 7vh;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 44ch;
+      padding: 0;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    body.style-cine #final-subtitles {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    body.style-cine .subtitle-block {
+      background: rgba(8, 11, 18, 0.90);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-md);
+      padding: 0.9rem 1.8rem;
+      font-family: var(--font-display);
+      font-size: clamp(1.4rem, 2.3vw, 2.3rem);
+      font-weight: 700;
+      text-align: center;
+      color: #ffffff;
+      line-height: 1.35;
+      letter-spacing: -0.01em;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8);
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.85);
+      -webkit-text-stroke: 0.8px rgba(0, 0, 0, 0.8);
+      animation: netflix-pop 0.22s var(--ease) forwards;
+      transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    }
+
+    body.style-cine .subtitle-interim {
+      color: #67e8f9;
+      background: rgba(8, 11, 18, 0.92);
+      border-left: none;
+      font-style: normal;
+      text-align: center;
+      margin: 0 auto;
+      animation: netflix-pop 0.15s var(--ease) forwards;
+    }
+
+    /* 2. ESTILO NOTICIERO (BBC Live Roll-up: 2-3 líneas, continuo hacia arriba) */
+    body.style-noticiero main.subtitles-container {
+      position: fixed;
+      bottom: 2.5rem;
+      left: 2.5rem;
+      width: min(880px, calc(100vw - 5rem));
+      max-height: 175px;
+      overflow: hidden;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 6px;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    body.style-noticiero #final-subtitles {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 6px;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    body.style-noticiero .subtitle-block {
+      background: rgba(15, 23, 42, 0.95);
+      border-left: 5px solid var(--nerd-cyan);
+      border-radius: var(--radius-xs);
+      padding: 0.65rem 1.4rem;
+      font-family: var(--font-display);
+      font-size: clamp(1.2rem, 1.8vw, 1.65rem);
+      font-weight: 700;
+      text-align: left;
+      color: #f8fafc;
+      line-height: 1.32;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+      animation: bbc-roll-up 0.28s var(--ease) forwards;
+      transition: all 0.28s var(--ease);
+    }
+
+    body.style-noticiero .subtitle-interim {
+      color: #38bdf8;
+      border-left: 5px solid var(--accent);
+      background: rgba(15, 23, 42, 0.98);
+      font-style: italic;
+      margin-top: 4px;
+    }
+
+    /* 3. ESTILO PRESENTACIÓN (Slide / Keynote: 1 línea grande, bottom bar) */
+    body.style-presentacion main.subtitles-container {
+      position: fixed;
+      bottom: 1.8rem;
+      left: 2rem;
+      right: 2rem;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    body.style-presentacion .subtitle-block {
+      width: 100%;
+      background: rgba(6, 9, 15, 0.95);
+      border-bottom: 4px solid var(--nerd-yellow);
+      padding: 0.85rem 2rem;
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 2.8vw, 2.7rem);
+      font-weight: 700;
+      text-align: center;
+      color: #ffffff;
+      line-height: 1.25;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
+      border-radius: var(--radius-sm);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85);
+      animation: slide-banner 0.2s var(--ease);
+    }
+
+    body.style-presentacion .subtitle-interim {
+      color: #fde047;
+      border-left: none;
+      font-style: normal;
+    }
+
+    /* 4. ESTILO BROADCAST (OBS Lower-Third para streaming y overlay) */
+    body.style-broadcast main.subtitles-container,
+    body.overlay-mode:not(.style-cine):not(.style-noticiero):not(.style-presentacion) main.subtitles-container {
+      position: fixed;
+      bottom: 2.5rem;
+      left: 2.5rem;
+      right: 2.5rem;
+      max-width: none;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    body.style-broadcast .subtitle-block,
+    body.overlay-mode:not(.style-cine):not(.style-noticiero):not(.style-presentacion) .subtitle-block {
+      background: linear-gradient(90deg, rgba(8, 12, 22, 0.96) 0%, rgba(8, 12, 22, 0.90) 80%, rgba(8, 12, 22, 0.60) 100%);
+      border-radius: var(--radius-sm);
+      padding: 1.1rem 2rem;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 1), 0 0 18px rgba(0, 0, 0, 0.95);
+      -webkit-text-stroke: 1.2px rgba(0, 0, 0, 0.85);
+      font-size: clamp(1.8rem, 2.6vw, 2.6rem);
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.32;
+      border-left: 6px solid var(--accent);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.85);
+      animation: broadcast-in 0.22s var(--ease);
+    }
+
+    body.style-broadcast .subtitle-interim,
+    body.overlay-mode:not(.style-cine):not(.style-noticiero):not(.style-presentacion) .subtitle-interim {
+      color: #e2e8f0;
+      opacity: 0.96;
+      border-left: 6px solid var(--nerd-cyan);
+    }
+
+    /* OBS OVERLAY TRANSPARENCY OVERRIDES */
+    html.overlay-mode,
     body.overlay-mode {
       background: transparent !important;
-      overflow: hidden;
+      background-color: rgba(0, 0, 0, 0) !important;
+      background-image: none !important;
+      overflow: hidden !important;
+      margin: 0 !important;
+      padding: 0 !important;
     }
 
     body.overlay-mode header.toolbar,
     body.overlay-mode #status-banner,
-    body.overlay-mode .standby-placeholder {
+    body.overlay-mode #scroll-resume-banner,
+    body.overlay-mode .standby-placeholder,
+    body.overlay-mode .flag-argentina-container {
       display: none !important;
     }
 
-    body.overlay-mode main.subtitles-container {
-      position: fixed;
-      bottom: 2rem;
-      left: 2rem;
-      right: 2rem;
-      max-width: none;
-      padding: 0;
-      justify-content: flex-end;
+    @keyframes netflix-pop {
+      0% {
+        opacity: 0;
+        transform: scale(0.96) translateY(6px);
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
     }
 
-    body.overlay-mode .subtitle-block {
-      background: rgba(0, 0, 0, 0.75);
-      border-radius: 10px;
-      padding: 0.8rem 1.4rem;
-      text-shadow: 2px 2px 5px #000, -2px -2px 5px #000, 2px -2px 5px #000, -2px 2px 5px #000;
-      font-size: 2.2rem;
-      font-weight: 700;
-      color: #ffffff;
-      line-height: 1.4;
-      border-left: 6px solid #38bdf8;
+    @keyframes bbc-roll-up {
+      0% {
+        opacity: 0;
+        transform: translateY(28px);
+      }
+
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
-    body.overlay-mode .subtitle-interim {
-      color: #cbd5e1;
-      opacity: 0.95;
+    @keyframes bbc-roll-out {
+      0% {
+        opacity: 1;
+        transform: translateY(0);
+        max-height: 80px;
+      }
+
+      100% {
+        opacity: 0;
+        transform: translateY(-24px);
+        max-height: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+    }
+
+    .roll-out {
+      animation: bbc-roll-out 0.28s var(--ease) forwards !important;
+      overflow: hidden;
+    }
+
+    @keyframes pop-on {
+      0% {
+        opacity: 0;
+        transform: scale(0.96) translateY(4px);
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    @keyframes roll-up {
+      0% {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slide-banner {
+      0% {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes broadcast-in {
+      0% {
+        opacity: 0;
+        transform: translateX(-12px);
+      }
+
+      100% {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+
+    /* Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      ::before,
+      ::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
     }
   </style>
 </head>
+
 <body>
-  <header class="toolbar" id="toolbar">
+  <header class="toolbar" id="toolbar" aria-label="Controles de accesibilidad y sala">
     <div class="brand">
-      <a href="/">← Salas</a>
-      <span class="room-name" id="room-title">Cargando sala...</span>
+      <a href="/" class="nav-back" title="Volver al catálogo de salas">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="19" y1="12" x2="5" y2="12" />
+          <polyline points="12 19 5 12 12 5" />
+        </svg>
+        <span>Salas</span>
+      </a>
+      <img src="/img/NERDEARLA_logo.svg" alt="Nerdearla"
+        style="height: 18px; width: auto; opacity: 0.95; margin: 0 3px;" />
+      <img src="/img/NeJoyT_Logo_V2.svg" alt="NejoyT"
+        style="height: 18px; width: auto; opacity: 0.95; margin-right: 6px;" />
+      <span class="room-name" id="room-title">Conectando a la sala...</span>
+      <a id="btn-export-doc" href="#" target="_blank" class="nav-back"
+        title="Leer transcripción continua estructurada o descargar PDF"
+        style="margin-left: 6px; padding: 4px 10px; font-size: 0.78rem;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+        </svg>
+        <span>Texto / PDF</span>
+      </a>
     </div>
 
     <div class="controls">
-      <label for="lang-select" style="font-size: 0.85rem; color: var(--text-interim);">Idioma:</label>
-      <select id="lang-select">
+      <label for="style-select" class="ctrl-label">Estilo:</label>
+      <select id="style-select" class="ctrl-select" aria-label="Seleccionar estilo visual de subtítulos">
+        <option value="estandar">Estándar (Auditorio)</option>
+        <option value="cine">Cine (Estilo Netflix)</option>
+        <option value="noticiero">Noticiero (BBC Roll-up)</option>
+        <option value="presentacion">Presentación (Slide)</option>
+        <option value="broadcast">Broadcast (OBS Lower-Third)</option>
+        <option value="contraste">Alto Contraste (WCAG AAA)</option>
+      </select>
+
+      <label for="font-family-select" class="ctrl-label">Fuente:</label>
+      <select id="font-family-select" class="ctrl-select" aria-label="Seleccionar tipografía de subtítulos">
+        <option value="Outfit" selected>Outfit (Moderna)</option>
+        <option value="Inter">Inter (Elegante)</option>
+        <option value="Montserrat">Montserrat (Titular)</option>
+        <option value="Lexend">Lexend (Alta Lectura)</option>
+        <option value="Bebas Neue">Bebas Neue (Noticiero)</option>
+        <option value="Roboto Mono">Roboto Mono (Técnica)</option>
+      </select>
+
+      <label for="lang-select" class="ctrl-label">Idioma:</label>
+      <select id="lang-select" class="ctrl-select" aria-label="Seleccionar idioma de subtítulos">
         <option value="es" selected>Español</option>
         <option value="en">English</option>
         <option value="pt">Português</option>
       </select>
 
-      <button id="font-dec" title="Reducir fuente">A-</button>
-      <button id="font-inc" title="Aumentar fuente">A+</button>
-      <button id="contrast-toggle" title="Modo Alto Contraste">Alto Contraste</button>
+      <button id="font-dec" class="ctrl-btn" title="Reducir tamaño de letra" aria-label="Reducir fuente">A-</button>
+      <button id="font-inc" class="ctrl-btn" title="Aumentar tamaño de letra" aria-label="Aumentar fuente">A+</button>
+      <button id="contrast-toggle" class="ctrl-btn" title="Alternar modo de alto contraste"
+        aria-label="Alternar modo de alto contraste">Contraste</button>
 
-      <div class="status-badge" id="status-badge">
+      <div class="status-badge" id="status-badge" role="status" aria-live="polite">
+        <span class="radar-dot" aria-hidden="true"></span>
         <span id="status-text">Conectando...</span>
       </div>
     </div>
   </header>
 
-  <div id="status-banner"></div>
+  <div id="status-banner" role="alert"></div>
 
-  <main class="subtitles-container" id="subtitles">
+  <main class="subtitles-container" id="subtitles" aria-live="polite">
     <div id="standby-msg" class="standby-placeholder" style="display: none;">
       <h2>Sala en Espera (Standby)</h2>
-      <p>La charla aún no ha comenzado. Los subtítulos aparecerán automáticamente aquí en cuanto inicie el orador.</p>
+      <p>La charla aún no ha comenzado. Los subtítulos aparecerán automáticamente aquí en cuanto el orador inicie la
+        ponencia.</p>
     </div>
 
     <!-- Subtítulos finalizados -->
     <div id="final-subtitles"></div>
     <!-- Subtítulo interino en vivo -->
-    <div id="interim-subtitle" class="subtitle-block subtitle-interim" style="display: none;"></div>
+    <div id="interim-subtitle" class="subtitle-block subtitle-interim" style="display: none;" aria-live="polite"></div>
   </main>
+
+  <button id="scroll-resume-banner" onclick="resumeAutoScroll()" aria-label="Reanudar auto-desplazamiento">
+    Auto-scroll pausado · Clic para reanudar
+  </button>
 
   <script>
     const urlParams = new URLSearchParams(window.location.search);
     const isOverlay = urlParams.get('overlay') === '1';
     const roomId = window.location.pathname.split('/').pop() || 'auditorio-principal';
 
+    // Export link setup
+    const exportBtn = document.getElementById('btn-export-doc');
+    if (exportBtn) {
+      exportBtn.href = `/api/rooms/${roomId}/export?format=html`;
+    }
+
     if (isOverlay) {
+      document.documentElement.classList.add('overlay-mode');
       document.body.classList.add('overlay-mode');
     }
 
-    let fontSize = 1.5;
+    // Dynamic Fonts System (Google Fonts + Local Custom Fonts)
+    const fontSelect = document.getElementById('font-family-select');
+    const urlFont = urlParams.get('font');
+    let currentFont = urlFont || localStorage.getItem('nejoyt_font_family') || 'Outfit';
+
+    function applyFont(fontName) {
+      currentFont = fontName;
+      document.documentElement.style.setProperty('--font-display', `'${fontName}', 'Outfit', system-ui, sans-serif`);
+      if (fontSelect && fontSelect.value !== fontName) {
+        fontSelect.value = fontName;
+      }
+      localStorage.setItem('nejoyt_font_family', fontName);
+    }
+
+    if (fontSelect) {
+      fontSelect.addEventListener('change', () => {
+        applyFont(fontSelect.value);
+      });
+    }
+
+    async function loadCustomFonts() {
+      try {
+        const res = await fetch('/api/fonts');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.fonts && data.fonts.length) {
+          let styleTag = document.getElementById('custom-fonts-style');
+          if (!styleTag) {
+            styleTag = document.createElement('style');
+            styleTag.id = 'custom-fonts-style';
+            document.head.appendChild(styleTag);
+          }
+          let css = '';
+          data.fonts.forEach(f => {
+            css += `
+              @font-face {
+                font-family: '${f.name}';
+                src: url('${f.url}');
+                font-display: swap;
+              }
+            `;
+            if (fontSelect && !Array.from(fontSelect.options).some(o => o.value === f.name)) {
+              const opt = document.createElement('option');
+              opt.value = f.name;
+              opt.textContent = `📁 ${f.name} (Local)`;
+              fontSelect.appendChild(opt);
+            }
+          });
+          styleTag.textContent = css;
+        }
+      } catch (e) {
+        console.warn('Error cargando fuentes personalizadas:', e);
+      }
+    }
+
+    loadCustomFonts();
+    applyFont(currentFont);
+
+    // Subtitle Style System
+    const styleSelect = document.getElementById('style-select');
+    const urlStyle = urlParams.get('style') || urlParams.get('subtitle_style');
+    let currentStyle = urlStyle || localStorage.getItem('nejoyt_subtitle_style') || (isOverlay ? 'broadcast' : 'estandar');
+
+    function applyStyle(styleName) {
+      currentStyle = styleName;
+      document.body.classList.remove(
+        'style-estandar',
+        'style-cine',
+        'style-noticiero',
+        'style-presentacion',
+        'style-broadcast',
+        'style-contraste',
+        'high-contrast'
+      );
+
+      document.body.classList.add('style-' + styleName);
+
+      if (styleName === 'contraste') {
+        document.body.classList.add('high-contrast');
+        if (contrastBtn) contrastBtn.classList.add('ctrl-btn-active');
+      } else {
+        if (contrastBtn) contrastBtn.classList.remove('ctrl-btn-active');
+      }
+
+      if (styleSelect && styleSelect.value !== styleName) {
+        styleSelect.value = styleName;
+      }
+
+      localStorage.setItem('nejoyt_subtitle_style', styleName);
+      pruneHistoryForStyle();
+    }
+
+    if (styleSelect) {
+      styleSelect.addEventListener('change', () => {
+        applyStyle(styleSelect.value);
+      });
+    }
+
+    let fontSize = 1.6;
     const fontIncBtn = document.getElementById('font-inc');
     const fontDecBtn = document.getElementById('font-dec');
     const contrastBtn = document.getElementById('contrast-toggle');
@@ -299,9 +920,12 @@
     const statusText = document.getElementById('status-text');
     const statusBanner = document.getElementById('status-banner');
     const standbyMsg = document.getElementById('standby-msg');
+    const scrollResumeBtn = document.getElementById('scroll-resume-banner');
+
+    applyStyle(currentStyle);
 
     fontIncBtn.addEventListener('click', () => {
-      fontSize = Math.min(fontSize + 0.25, 3.0);
+      fontSize = Math.min(fontSize + 0.25, 3.25);
       document.documentElement.style.setProperty('--font-size', fontSize + 'rem');
     });
 
@@ -311,21 +935,74 @@
     });
 
     contrastBtn.addEventListener('click', () => {
-      document.body.classList.toggle('high-contrast');
+      const isNowHighContrast = !document.body.classList.contains('high-contrast');
+      if (isNowHighContrast) {
+        applyStyle('contraste');
+      } else {
+        applyStyle('estandar');
+      }
     });
 
-    // Auto-scroll
+    // Auto-scroll ergonómico
     let userScrolled = false;
     window.addEventListener('scroll', () => {
+      if (isOverlay || currentStyle === 'cine' || currentStyle === 'noticiero' || currentStyle === 'presentacion') return;
       const scrollPos = window.innerHeight + window.scrollY;
       const threshold = document.body.offsetHeight - 120;
       userScrolled = scrollPos < threshold;
+      if (scrollResumeBtn) {
+        scrollResumeBtn.style.display = userScrolled ? 'block' : 'none';
+      }
     });
 
+    function resumeAutoScroll() {
+      userScrolled = false;
+      if (scrollResumeBtn) scrollResumeBtn.style.display = 'none';
+      scrollToBottom();
+    }
+
     function scrollToBottom() {
+      if (isOverlay || currentStyle === 'cine' || currentStyle === 'noticiero' || currentStyle === 'presentacion') return;
       if (!userScrolled) {
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
       }
+    }
+
+    function getMaxHistoryForStyle() {
+      if (isOverlay) return 2;
+      if (currentStyle === 'cine') return 1;
+      if (currentStyle === 'noticiero') return 3;
+      if (currentStyle === 'presentacion') return 1;
+      if (currentStyle === 'broadcast') return 2;
+      return 5000;
+    }
+
+    function pruneHistoryForStyle() {
+      const max = getMaxHistoryForStyle();
+      while (finalContainer.children.length > max) {
+        finalContainer.removeChild(finalContainer.firstChild);
+      }
+    }
+
+    let cineIdleTimer = null;
+    function scheduleCineFadeOut() {
+      if (currentStyle !== 'cine') return;
+      clearTimeout(cineIdleTimer);
+      // Según Netflix Style Guide y pauta del usuario: el subtítulo se muestra y luego desaparece completamente
+      cineIdleTimer = setTimeout(() => {
+        if (currentStyle === 'cine') {
+          Array.from(finalContainer.children).forEach(child => {
+            child.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+            child.style.opacity = '0';
+            child.style.transform = 'scale(0.96) translateY(6px)';
+          });
+          setTimeout(() => {
+            if (currentStyle === 'cine') {
+              finalContainer.innerHTML = '';
+            }
+          }, 650);
+        }
+      }, 4500);
     }
 
     function updateRoomStateUI(state, reason = "") {
@@ -334,38 +1011,86 @@
 
       if (state === 'active') {
         statusBadge.classList.add('active');
-        statusText.textContent = '● EN VIVO';
+        statusText.textContent = 'EN VIVO';
         standbyMsg.style.display = 'none';
       } else if (state === 'starting') {
         statusBadge.classList.add('starting');
-        statusText.textContent = '◌ INICIANDO...';
+        statusText.textContent = 'INICIANDO...';
         standbyMsg.style.display = finalContainer.children.length === 0 ? 'flex' : 'none';
       } else if (state === 'degraded') {
         statusBadge.classList.add('degraded');
-        statusText.textContent = '⚠ RECONECTANDO';
+        statusText.textContent = 'RECONECTANDO';
         statusBanner.style.display = 'block';
         statusBanner.textContent = 'Reconectando fuente de audio... La transcripción se retoma en breve.';
       } else if (state === 'stopped') {
-        statusBadge.textContent = '■ EN ESPERA';
+        statusBadge.textContent = 'EN ESPERA';
         if (finalContainer.children.length === 0) {
           standbyMsg.style.display = 'flex';
         }
       } else if (state === 'error') {
         statusBadge.classList.add('error');
-        statusText.textContent = '✕ ERROR';
+        statusText.textContent = 'ERROR';
         statusBanner.style.display = 'block';
-        statusBanner.textContent = reason || 'La sala experimentó un error.';
+        statusBanner.textContent = reason || 'La sala experimentó una interrupción.';
       }
     }
 
-    // WebSocket conexión
     let ws = null;
     let userManuallySelectedLang = !!urlParams.get('lang');
     let selectedLang = urlParams.get('lang') || 'es';
 
+    const renderedSubtitleKeys = new Set();
+
+    function createSubtitleElement(text, speaker, index) {
+      const p = document.createElement('div');
+      p.className = 'subtitle-block subtitle-final';
+      if (speaker) {
+        const badge = document.createElement('span');
+        badge.className = 'speaker-pill';
+        badge.textContent = speaker;
+        p.appendChild(badge);
+      }
+      const t = document.createElement('span');
+      t.className = 'subtitle-text';
+      t.textContent = text;
+      p.appendChild(t);
+      if (index) p.dataset.index = index;
+      return p;
+    }
+
+    async function loadRoomHistory() {
+      if (isOverlay) return;
+      try {
+        const res = await fetch(`/api/rooms/${roomId}/history?lang=${selectedLang}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.history && data.history.length) {
+          standbyMsg.style.display = 'none';
+          data.history.forEach(item => {
+            const key = item.index ? ('idx_' + item.index) : ('txt_' + (item.text || '').trim());
+            if (key && !renderedSubtitleKeys.has(key)) {
+              renderedSubtitleKeys.add(key);
+              const p = createSubtitleElement(item.text, item.speaker, item.index);
+              finalContainer.appendChild(p);
+            }
+          });
+          pruneHistoryForStyle();
+          scrollToBottom();
+        }
+      } catch (err) {
+        console.warn('Error cargando historial de subtítulos:', err);
+      }
+    }
+
     langSelect.addEventListener('change', () => {
       userManuallySelectedLang = true;
       selectedLang = langSelect.value;
+      if (exportBtn) {
+        exportBtn.href = `/api/rooms/${roomId}/export?format=html&lang=${selectedLang}`;
+      }
+      renderedSubtitleKeys.clear();
+      finalContainer.innerHTML = '';
+      loadRoomHistory();
       connectWebSocket();
     });
 
@@ -375,13 +1100,14 @@
       }
 
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws/${roomId}?lang=${selectedLang}`;
+      const overlayFlag = isOverlay ? '&overlay=1' : '';
+      const wsUrl = `${protocol}//${window.location.host}/ws/${roomId}?lang=${selectedLang}${overlayFlag}`;
 
       ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
-        // Al conectar por ws, consultamos el estado real
         fetchRoomInfo();
+        loadRoomHistory();
       };
 
       ws.onmessage = (event) => {
@@ -396,39 +1122,71 @@
           }
 
           if (data.event_type === 'interim') {
-            const isInterimMatch = !data.language || data.language === selectedLang || data.language.startsWith(selectedLang);
-            if (isInterimMatch) {
-              standbyMsg.style.display = 'none';
-              interimEl.textContent = data.text;
-              interimEl.style.display = 'block';
-              scrollToBottom();
+            standbyMsg.style.display = 'none';
+            if (currentStyle === 'cine') {
+              finalContainer.innerHTML = '';
             }
-          } 
+            interimEl.textContent = data.text;
+            interimEl.style.display = 'block';
+            interimEl.style.opacity = '1';
+            scrollToBottom();
+          }
           else if (data.event_type === 'final' || data.event_type === 'translation') {
             standbyMsg.style.display = 'none';
-            const isRelevant = 
+            const isRelevant =
               (selectedLang === data.language) ||
               (data.event_type === 'final' && selectedLang === 'en' && data.language.startsWith('en')) ||
               (data.event_type === 'final' && selectedLang === 'es' && data.language.startsWith('es')) ||
-              (data.event_type === 'final' && selectedLang === 'pt' && data.language.startsWith('pt'));
+              (data.event_type === 'final' && selectedLang === 'pt' && data.language.startsWith('pt')) ||
+              (!data.language);
 
-            if (isRelevant || !data.language) {
+            if (isRelevant) {
               interimEl.style.display = 'none';
               interimEl.textContent = '';
 
-              const p = document.createElement('div');
-              p.className = 'subtitle-block subtitle-final';
-              p.textContent = data.text;
-              finalContainer.appendChild(p);
-
-              if (finalContainer.children.length > 50) {
-                finalContainer.removeChild(finalContainer.firstChild);
+              const evIdx = (data.metadata && data.metadata.index) ? data.metadata.index : null;
+              const key = evIdx ? ('idx_' + evIdx) : ('txt_' + (data.text || '').trim());
+              if (key && renderedSubtitleKeys.has(key)) {
+                return;
               }
-              scrollToBottom();
+              if (key) {
+                renderedSubtitleKeys.add(key);
+              }
+
+              const detectedSpk = (data.metadata && data.metadata.speaker) ? data.metadata.speaker : null;
+
+              if (currentStyle === 'cine') {
+                finalContainer.innerHTML = '';
+                const p = createSubtitleElement(data.text, detectedSpk, evIdx);
+                p.style.opacity = '1';
+                finalContainer.appendChild(p);
+                scheduleCineFadeOut();
+              } else if (currentStyle === 'noticiero') {
+                while (finalContainer.children.length >= 3) {
+                  const oldest = finalContainer.firstChild;
+                  oldest.classList.add('roll-out');
+                  setTimeout(() => {
+                    if (oldest && oldest.parentNode === finalContainer) {
+                      finalContainer.removeChild(oldest);
+                    }
+                  }, 260);
+                  break;
+                }
+                const p = createSubtitleElement(data.text, detectedSpk, evIdx);
+                p.style.opacity = '1';
+                finalContainer.appendChild(p);
+                scrollToBottom();
+              } else {
+                const p = createSubtitleElement(data.text, detectedSpk, evIdx);
+                p.style.opacity = '1';
+                finalContainer.appendChild(p);
+                pruneHistoryForStyle();
+                scrollToBottom();
+              }
             }
           }
         } catch (e) {
-          console.error("Error parseando evento WebSocket:", e);
+          console.error("Error procesando evento WebSocket:", e);
         }
       };
 
@@ -444,7 +1202,6 @@
       };
     }
 
-    // Cargar metadata de la sala
     async function fetchRoomInfo() {
       try {
         const res = await fetch('/api/rooms');
@@ -458,14 +1215,12 @@
 
           const defaultTarget = current.target_lang || 'es';
 
-          // Si el usuario no eligió un idioma manualmente en la UI ni por URL, adoptar el idioma de subtítulo configurado en la sala
           let needsWsReconnect = false;
           if (!userManuallySelectedLang && current.target_lang && selectedLang !== current.target_lang) {
             selectedLang = current.target_lang;
             needsWsReconnect = true;
           }
 
-          // Ajustar idiomas disponibles en el selector
           const availableLangs = (current.target_langs && current.target_langs.length > 0)
             ? [...current.target_langs]
             : [defaultTarget];
@@ -479,6 +1234,10 @@
           `).join('');
           langSelect.value = selectedLang;
 
+          if (exportBtn) {
+            exportBtn.href = `/api/rooms/${roomId}/export?format=html&lang=${selectedLang}`;
+          }
+
           if (needsWsReconnect && ws && ws.readyState === WebSocket.OPEN) {
             connectWebSocket();
           }
@@ -489,8 +1248,11 @@
     }
 
     fetchRoomInfo();
+    loadRoomHistory();
     connectWebSocket();
     setInterval(fetchRoomInfo, 5000);
   </script>
+
 </body>
+
 </html>
