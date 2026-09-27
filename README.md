@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/icons/nejoyt_logo.png" alt="NejoyT Logo" width="140"/>
+<img src="img/NeJoyT_Logo_V2.svg" alt="NejoyT Logo" width="140"/>
 
 # NejoyT
 
@@ -11,7 +11,7 @@ Sin cortes de sesión · Glosario técnico en caliente · Cloud o 100% local
 
 <br/>
 
-![Python]([https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white](https://github.com/TheHedonist01/NejoyT/blob/aa84b9447bd62ceaab3be6dd1dfbb8aaea61039f/img/NeJoyT_Logo_V2.svg))
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![Licencia](https://img.shields.io/badge/Licencia-Apache%202.0-blue?style=for-the-badge)
 ![ASR](https://img.shields.io/badge/ASR-gemini--3.5--transcribe--live-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
