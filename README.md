@@ -393,7 +393,7 @@ Apache 2.0. El texto completo está en [LICENSE](LICENSE).
 
 <div align="center">
 
-<img src="assets/icons/nejoyt_logo.png" alt="NejoyT" width="48"/>
+<img src="img/Logo_pequeño.svg" alt="NejoyT" width="48"/>
 
 **NejoyT** — *Que ninguna charla se quede sin subtítulos.*
 
